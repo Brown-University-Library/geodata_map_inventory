@@ -2,6 +2,7 @@ from tkinter import *
 from tkinter import ttk
 from tkinter.ttk import Treeview
 import sqlite3
+import file_io
 
 class Database:
     def __init__(self, db):
@@ -57,59 +58,3 @@ class Database:
 #     # append to list in order to keep the reference
 #     images.append(image)
 # root.mainloop()
-
-import tkinter as tk
-from tkinter import ttk
-from tkinter.messagebox import showinfo  # for messageboxes, if desired
-
-root = tk.Tk()
-root.title('Treeview demo')
-root.geometry('820x250')
-
-label = ttk.Label(root, text='Full name:')
-label.grid(row=0, column=0)
-
-countryvar = StringVar()
-country = ttk.Combobox(root, textvariable=countryvar, state=DISABLED)
-country['values'] = ('USA', 'Canada', 'Australia')
-country.grid(row=0, column=3)
-
-# define columns
-columns = ('first_name', 'last_name', 'email')
-
-tree = ttk.Treeview(root, columns=columns, show='headings')
-
-# define headings
-tree.heading('first_name', text='First Name')
-tree.heading('last_name', text='Last Name')
-tree.heading('email', text='Email')
-
-# generate sample data
-contacts = []
-for n in range(1, 100):
-    contacts.append((f'first {n}', f'last {n}', f'email{n}@example.com'))
-
-# add data to the treeview
-for contact in contacts:
-    tree.insert('', tk.END, values=contact)
-
-
-def item_selected(event):
-    for selected_item in tree.selection():
-        item = tree.item(selected_item)
-        record = item['values'] # list of the values in the row (could be appended)
-        # # show a message
-        # showinfo(title='Information', message=','.join(record))
-
-
-tree.bind('<<TreeviewSelect>>', item_selected)
-
-tree.grid(row=1, column=1, sticky='nsew')
-
-# add a scrollbar
-scrollbar = ttk.Scrollbar(root, orient=tk.VERTICAL, command=tree.yview)
-tree.configure(yscroll=scrollbar.set)
-scrollbar.grid(row=1, column=2, sticky='ns')
-
-# run the app
-root.mainloop()
