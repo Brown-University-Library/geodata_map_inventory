@@ -5,7 +5,7 @@
 
 import pandas as pd
 
-def read_topos(maps:dict):
+def read_topos(filepath:str, maps:dict):
     """
     Reads tabular-format data on topographic maps from the csv table of all USGS
     topographic maps that were ever made into a nested dictionary structure, 
@@ -16,8 +16,6 @@ def read_topos(maps:dict):
     print year 1999, calling maps[24000]['Oregon']['Salem'][1988][1999] would 
     yield a list of tuples with the (scan ID, product URL) of each matching map.
     """
-    # file path for the USGS topos database - should be OK to hard code
-    filepath = 'usgs_topos.csv'
     # these are the column names corresponding to the lookup parameters
     columns = ['scan_id', 'cell_name', 'primary_state', 'map_scale', 
                 'date_on_map', 'print_year', 'product_url']
@@ -48,7 +46,9 @@ def read_topos(maps:dict):
 # other methods that might belong here include reading / writing user sessions,
 # and maybe even the SQLite database calls.
 
-mymaps = {}
-read_topos(mymaps)
-print(mymaps[24000]['Oregon']['Sparta'][1988])
+if __name__ == '__main__':
+    # example of how to call read_topos()
+    mymaps = {}
+    read_topos('usgs_topos.csv', mymaps)
+    print(mymaps[24000]['Oregon']['Sparta'][1988])
 
