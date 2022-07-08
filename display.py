@@ -8,12 +8,69 @@ from tkinter import *
 from tkinter import ttk
 # from tkinter.messagebox import showinfo  # for messageboxes, if desired
 import file_io
+import db
 from collections import OrderedDict
 from functools import partial
 
 tool_title = 'Brown University Map Collection Inventory Tool'
+map_db = db.Database('//files.brown.edu/DFS/Library_Shared/_geodata/maps/maps_we_have_test.db')
 
 # -------------- methods under construction -----------------
+def is_number(s):
+    """This is part of my workaround for the fact that pandas casts integers in 
+    columns with missing values as floats."""
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
+
+def traverse_dicts(depth):
+    """traverses the nested dictionary structure based on whatever selections have
+    been made in the drop-downs.  It's assumed that this method will only be called
+    if selections have already been made down to the given depth. returns whatever
+    is at that depth of the structure (either another dictionary, or a value list)"""
+    data = maps
+    for dd in list(dropdowns.values())[:depth]: # loop through the currently active drop downs
+        val = dd.menu.get() # get() method seems to always return strings, but some of the data is numeric
+        if is_number(val): # so if it is numeric, we convert the stringed number to an integer
+            val = int(float(val))
+        data = data[val]  # drill down into the appropriate dict based on selections
+    return data
+
+def dd_selected(cur_dd): 
+    """given a selection in a given drop-down menu, control configuration of other drop-downs"""
+    add1_btn['state'] = tk.DISABLED
+    add_mult_btn['state'] = tk.DISABLED
+    if cur_dd.index == len(label_names) - 1:  # if the selected dropdown is the last one
+        add1_btn['state'] = tk.NORMAL
+        add_mult_btn['state'] = tk.NORMAL
+        return None # exit this method without doing anything
+
+    # otherwise, we're gonna do something with the next drop down menu
+    next_dd = dropdowns[label_names[cur_dd.index + 1]]
+
+    # we need something like a working_dict, or maybe a loop of the currently active dds getting their values?
+    working_dict = traverse_dicts(next_dd.index) # loop through the currently active drop downs
+    vals = sorted(list(working_dict.keys())) # the set of possible values for the next drop down
+    next_dd.menu['values'] = vals # populate next drop-down with possible values
+
+    # blank out & disable all drop-down menus after whichever one was selected
+    for dd in list(dropdowns.values())[next_dd.index:]: 
+        dd.menu.set('')
+        dd.menu['state'] = 'disabled'
+
+    if len(vals) == 1:  # if there's only 1 possible value for the next drop down
+        val = vals[0]
+        # if val == '':
+        #     val = '(none)'
+        # lock that value into that drop-down menu and disable it from selections
+        next_dd.menu.set(val)
+        next_dd.menu['state'] = 'disabled' 
+        dd_selected(next_dd) # do whatever we would have done if we had manually selected the next drop-down
+    else:
+        next_dd.menu['state'] = 'readonly'  # activate the next drop down so a manual selection can be made on it
+
 def record_exception():
     """
     Defines action that's taken when the Record exception button is pressed
@@ -26,11 +83,24 @@ def record_exception():
         scale_dd.current(val - 1) # set the drop down to the next value in the list of possible values
         dd_selected(dropdowns['Map Scale'])
 
-def remove_record():
+def remove_record(scan_id):
+    """deletes a given scan id from sqlite backend"""
+    map_db.remove(scan_id)
+    remaining = map_db.fetch(scan_id)
+    if len(remaining) == 0:
+        # call the method to display confirmation of removal
+        pass
+    else:
+        print("Possible error removing record from the database: ")
+        print(remaining)
+    pass
+
+def remove_selected_record():
     """
     Defines action that's taken when the Remove selected record button is pressed
     """
-    pass
+    #get the scan id of whatever table record is selected
+    # remove_record(scan_id)
 
     # testing "next" button for scale drop down
     val = scale_dd.current()
@@ -49,12 +119,11 @@ def we_have_1():
     # if so, do whatever we do for multiples (present links, etc).
     # if it's just one record, insert it into the table.
 
-    # we wouldn't have to check if all selections are made if we only activated this button upon print year selection
     results = traverse_dicts(len(dropdowns)) # should be a list of tuples
-    print(results)
     if len(results) == 1:
-        insert_record()
-    pass
+        insert_record(results[0][0])
+    else:
+        pass  # do whatever we are doing to do for multiple matching records
 
 def we_have_multiple():
     """
@@ -62,10 +131,24 @@ def we_have_multiple():
     """
     pass
 
-def insert_record():
-    """does sqlite backend for a map we have on hand, and adds record to the table
-    frame"""
+def insert_record(scan_id):
+    """inserts record for map we have on hand into sqlite backend, confirms the
+    insertion by selecting that record from the db, and then calls methods to add
+    that record to the table frame and print out a message, etc"""
+    # maybe insert, then fetch for confirmation?
+    map_db.insert(scan_id)
+    inserted = map_db.fetch(scan_id)
+    if len(inserted) == 1:
+        add_to_table(scan_id) # display record on table, as well as confirmation
+        pass
+    else:
+        print("Possible error inserting record into the database: ")
+        print(inserted)
     pass
+
+def add_to_table(scan_id):
+    pass # maybe start a list with USGS, then append the selected values 
+    # tbl.insert('', 0, values=('USGS', 24000, 'AK', 'Adak', 1922, ''))
 
 # ------------------- initialize tkinter window -----------------
 
@@ -110,57 +193,8 @@ for idx, dd in enumerate(dropdowns.values()):
 maps = {}
 file_io.read_topos('usgs_topos.csv', maps)
 
-def is_number(s):
-    try:
-        float(s)
-        return True
-    except ValueError:
-        return False
-
-def traverse_dicts(depth):
-    data = maps
-    for dd in list(dropdowns.values())[:depth]: # loop through the currently active drop downs
-        val = dd.menu.get() # get() method seems to always return strings, but some of the data is numeric
-        if is_number(val): # so if it is numeric, we convert the stringed number to an integer
-            val = int(float(val))
-        data = data[val]  # drill down into the appropriate dict based on selections
-    return data
-
-def dd_selected(cur_dd): 
-    """given a selection in a given drop-down menu, control configuration of other drop-downs"""
-    add1_btn['state'] = tk.DISABLED
-    add_mult_btn['state'] = tk.DISABLED
-    if cur_dd.index == len(label_names) - 1:  # if the selected dropdown is the last one
-        add1_btn['state'] = tk.NORMAL
-        add_mult_btn['state'] = tk.NORMAL
-        return None # exit this method without doing anything
-
-    # otherwise, we're gonna do something with the next drop down menu
-    next_dd = dropdowns[label_names[cur_dd.index + 1]]
-
-    # we need something like a working_dict, or maybe a loop of the currently active dds getting their values?
-    working_dict = traverse_dicts(next_dd.index) # loop through the currently active drop downs
-    vals = sorted(list(working_dict.keys())) # the set of possible values for the next drop down
-    next_dd.menu['values'] = vals # populate next drop-down with possible values
-
-    # blank out & disable all drop-down menus after whichever one was selected
-    for dd in list(dropdowns.values())[next_dd.index:]: 
-        dd.menu.set('')
-        dd.menu['state'] = 'disabled'
-
-    if len(vals) == 1:  # if there's only 1 possible value for the next drop down
-        val = vals[0]
-        # if val == '':
-        #     val = '(none)'
-        # lock that value into that drop-down menu and disable it from selections
-        next_dd.menu.set(val)
-        next_dd.menu['state'] = 'disabled' 
-        dd_selected(next_dd) # do whatever we would have done if we had manually selected the next drop-down
-    else:
-        next_dd.menu['state'] = 'readonly'  # activate the next drop down so a manual selection can be made on it
-
 # the for loop below does not work because lambdas refer to the variable dd rather
-# than to its value at each 
+# than to its value at each iteration of the loop
 #
 # for dd in list(dropdowns.values()):
 #     dd.menu.bind('<<ComboboxSelected>>', lambda event: dd_selected(dd))
@@ -200,7 +234,7 @@ damaged.grid(row=3, column=2, columnspan=2)
 exception_btn = ttk.Button(options, text='Record an exception', command=record_exception)
 exception_btn.grid(row=4, column=0, pady=5)
 
-remove_btn = ttk.Button(options, text='Remove selected record', command=remove_record)
+remove_btn = ttk.Button(options, text='Remove selected record', command=remove_selected_record)
 remove_btn.grid(row=5, column=0, pady=5)
 
 add1_btn = ttk.Button(options, text='We have 1', command=we_have_1, state=DISABLED)
@@ -287,3 +321,24 @@ tbl_scroll.grid(row=6, column=4, rowspan=1, sticky='ns') # one column to the rig
 
 # run the app
 root.mainloop()
+
+
+# --------- code for rendering images from URL into tkinter window, if desired ----------------
+
+# import urllib.request
+# import io
+# from PIL import Image, ImageTk
+# root = Tk()
+# images = []
+# fake_csv = [[1, "blue", 4, "pillow"], [2, "red", 12, "horse"]]
+# mapthumb = 'https://prd-tnm.s3.amazonaws.com/StagedProducts/Maps/HistoricalTopo/PDF/AK/25000/AK_Anchorage%20B-7%20NW_353597_1979_25000_tn.jpg'
+
+# for i in range(0, 1): # changed from 8 to 1 from https://stackoverflow.com/questions/38173526/displaying-images-from-url-in-tkinter
+#     raw_data = urllib.request.urlopen(mapthumb).read()
+#     im = Image.open(io.BytesIO(raw_data))
+#     image = ImageTk.PhotoImage(im)
+#     label1 = Label(root, image=image)
+#     label1.grid(row=i, sticky=W)
+
+#     # append to list in order to keep the reference
+#     images.append(image)
