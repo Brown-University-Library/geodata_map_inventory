@@ -20,22 +20,51 @@ def record_exception():
     """
     pass
 
+    # testing "prev" button for scale drop down
+    val = scale_dd.current()
+    if val != 0: # if we're not at the beginning of the list of possible values
+        scale_dd.current(val - 1) # set the drop down to the next value in the list of possible values
+        dd_selected(dropdowns['Map Scale'])
+
 def remove_record():
     """
     Defines action that's taken when the Remove selected record button is pressed
     """
     pass
 
+    # testing "next" button for scale drop down
+    val = scale_dd.current()
+    if val != len(maps.keys()) - 1: # if we're not at the end of the list of possible values
+        scale_dd.current(val + 1) # set the drop down to the next value in the list of possible values
+        dd_selected(dropdowns['Map Scale'])
+
 def we_have_1():
     """
     Defines action that's taken when the We have 1 button is pressed
     """
+    # This method does not check whether all possible selections have been made,
+    # because it is assumed that this method will only be called when all required 
+    # criteria have been selected. 
+    # This method does check if there are multiple records, and
+    # if so, do whatever we do for multiples (present links, etc).
+    # if it's just one record, insert it into the table.
+
+    # we wouldn't have to check if all selections are made if we only activated this button upon print year selection
+    results = traverse_dicts(len(dropdowns)) # should be a list of tuples
+    print(results)
+    if len(results) == 1:
+        insert_record()
     pass
 
 def we_have_multiple():
     """
     Defines action that's taken when the We have multiple button is pressed
     """
+    pass
+
+def insert_record():
+    """does sqlite backend for a map we have on hand, and adds record to the table
+    frame"""
     pass
 
 # ------------------- initialize tkinter window -----------------
@@ -81,33 +110,54 @@ for idx, dd in enumerate(dropdowns.values()):
 maps = {}
 file_io.read_topos('usgs_topos.csv', maps)
 
+def is_number(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
+
+def traverse_dicts(depth):
+    data = maps
+    for dd in list(dropdowns.values())[:depth]: # loop through the currently active drop downs
+        val = dd.menu.get() # get() method seems to always return strings, but some of the data is numeric
+        if is_number(val): # so if it is numeric, we convert the stringed number to an integer
+            val = int(float(val))
+        data = data[val]  # drill down into the appropriate dict based on selections
+    return data
+
 def dd_selected(cur_dd): 
     """given a selection in a given drop-down menu, control configuration of other drop-downs"""
+    add1_btn['state'] = tk.DISABLED
+    add_mult_btn['state'] = tk.DISABLED
     if cur_dd.index == len(label_names) - 1:  # if the selected dropdown is the last one
+        add1_btn['state'] = tk.NORMAL
+        add_mult_btn['state'] = tk.NORMAL
         return None # exit this method without doing anything
-    # otherwise, activate the next drop down menu
+
+    # otherwise, we're gonna do something with the next drop down menu
     next_dd = dropdowns[label_names[cur_dd.index + 1]]
+
     # we need something like a working_dict, or maybe a loop of the currently active dds getting their values?
-    working_dict = maps
-    for dd in list(dropdowns.values())[:next_dd.index]: # loop through the currently active drop downs
-        val = dd.menu.get()
-        if val.isnumeric():
-            val = int(val)
-        working_dict = working_dict[val]  # drill down into the appropriate dict based on selections
-    vals = sorted(list(working_dict.keys()))
+    working_dict = traverse_dicts(next_dd.index) # loop through the currently active drop downs
+    vals = sorted(list(working_dict.keys())) # the set of possible values for the next drop down
     next_dd.menu['values'] = vals # populate next drop-down with possible values
-    for dd in list(dropdowns.values())[next_dd.index:]: # should maybe blank out & disable rest of drop-down menus
+
+    # blank out & disable all drop-down menus after whichever one was selected
+    for dd in list(dropdowns.values())[next_dd.index:]: 
         dd.menu.set('')
         dd.menu['state'] = 'disabled'
-    if len(vals) == 1:
+
+    if len(vals) == 1:  # if there's only 1 possible value for the next drop down
         val = vals[0]
-        if val == '':
-            val = '(none)'
+        # if val == '':
+        #     val = '(none)'
+        # lock that value into that drop-down menu and disable it from selections
         next_dd.menu.set(val)
-        next_dd.menu['state'] = 'disabled'
-        dd_selected(next_dd)
+        next_dd.menu['state'] = 'disabled' 
+        dd_selected(next_dd) # do whatever we would have done if we had manually selected the next drop-down
     else:
-        next_dd.menu['state'] = 'readonly'  # take next drop-down out of disabled state
+        next_dd.menu['state'] = 'readonly'  # activate the next drop down so a manual selection can be made on it
 
 # the for loop below does not work because lambdas refer to the variable dd rather
 # than to its value at each 
@@ -153,7 +203,7 @@ exception_btn.grid(row=4, column=0, pady=5)
 remove_btn = ttk.Button(options, text='Remove selected record', command=remove_record)
 remove_btn.grid(row=5, column=0, pady=5)
 
-add1_btn = ttk.Button(options, text='We have 1', command=we_have_1)
+add1_btn = ttk.Button(options, text='We have 1', command=we_have_1, state=DISABLED)
 add1_btn.grid(row=4, column=2, rowspan=2, pady=5)
 
 add_mult_btn = ttk.Button(options, text='We have multiple', command=we_have_multiple)

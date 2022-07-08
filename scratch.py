@@ -1,6 +1,3 @@
-from tkinter import *
-from tkinter import ttk
-from tkinter.ttk import Treeview
 import sqlite3
 import file_io
 
@@ -8,28 +5,23 @@ class Database:
     def __init__(self, db):
         self.conn = sqlite3.connect(db)
         self.cur = self.conn.cursor()
-        self.cur.execute(
-            "CREATE TABLE IF NOT EXISTS routers (id INTEGER PRIMARY KEY, hostname text, brand text, ram integer, flash integer)")
-        self.conn.commit()
 
-    def fetch(self, hostname=''):
+    def fetch(self, scan_id):
         self.cur.execute(
-            "SELECT * FROM routers WHERE hostname LIKE ?", ('%'+hostname+'%',))
+            "SELECT * FROM all_usgs_topos WHERE scan_id = " + str(scan_id))
         rows = self.cur.fetchall()
         return rows
 
-    def fetch2(self, query):
-        self.cur.execute(query)
-        rows = self.cur.fetchall()
-        return rows
+    # worth noting that execute() does have a two-argument mode where the first arg is a wild-carded SQL
+    # and the second arg is a tuple listing variables or values you want to sub in for those wild cards. Example:
+    # self.cur.execute("UPDATE routers SET hostname = ?, brand = ? WHERE id = ?", (hostname, brand, id))
 
-    def insert(self, hostname, brand, ram, flash):
-        self.cur.execute("INSERT INTO routers VALUES (NULL, ?, ?, ?, ?)",
-                         (hostname, brand, ram, flash))
+    def insert(self, scan_id):
+        self.cur.execute("INSERT INTO usgs_topos_we_have SELECT * FROM all_usgs_topos WHERE scan_id = " + str(scan_id))
         self.conn.commit()
 
-    def remove(self, id):
-        self.cur.execute("DELETE FROM routers WHERE id=?", (id,))
+    def remove(self, scan_id):
+        self.cur.execute("DELETE FROM usgs_topos_we_have WHERE scan_id = " + str(scan_id))
         self.conn.commit()
 
     def update(self, id, hostname, brand, ram, flash):
@@ -58,3 +50,7 @@ class Database:
 #     # append to list in order to keep the reference
 #     images.append(image)
 # root.mainloop()
+
+if __name__ == "__main__":
+    tdb = Database('//files.brown.edu/DFS/Library_Shared/_geodata/maps/maps_we_have_test.db')
+    print(tdb.fetch(362330))

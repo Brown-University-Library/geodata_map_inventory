@@ -20,8 +20,9 @@ def read_topos(filepath:str, maps:dict):
     columns = ['scan_id', 'cell_name', 'primary_state', 'map_scale', 
                 'date_on_map', 'print_year', 'product_url']
 
-    # read csv into df
-    topo_df = pd.read_csv(filepath, usecols=columns).fillna("")
+    # read csv into df, selecting specified columns
+    topo_df = pd.read_csv(filepath, usecols=columns).fillna(-1)
+    topo_df['print_year'] = topo_df['print_year'].astype('Int64')
     topos = topo_df.values.tolist()
 
     for topo in topos:
@@ -51,7 +52,6 @@ if __name__ == '__main__':
     # example of how to call read_topos()
     mymaps = {}
     read_topos('usgs_topos.csv', mymaps)
-    print(mymaps[24000]['Oregon']['Sparta'][1988])
-    for state in mymaps[24000].keys():
-        print(state)
+    print(mymaps[24000]['Oregon']['Sparta'])
+    # print("{:2f}".format(1971))
 
