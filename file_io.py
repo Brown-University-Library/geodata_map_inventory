@@ -28,7 +28,7 @@ def read_topos(filepath:str, maps:dict):
         # unpack values of list into variables
         id, quad, state, scale, map_year, print_year, url = topo
 
-        # initialize dictionary structure as needed
+        # initialize nested dictionary structure as needed
         if scale not in maps:
             maps[scale] = {}
         if state not in maps[scale]:
@@ -38,6 +38,7 @@ def read_topos(filepath:str, maps:dict):
         if map_year not in maps[scale][state][quad]:
             maps[scale][state][quad][map_year] = {}
         if print_year not in maps[scale][state][quad][map_year]:
+            # initialize empty list for the (id, url) of each matching map
             maps[scale][state][quad][map_year][print_year] = []
         
         # populate values for each row
@@ -51,4 +52,6 @@ if __name__ == '__main__':
     mymaps = {}
     read_topos('usgs_topos.csv', mymaps)
     print(mymaps[24000]['Oregon']['Sparta'][1988])
+    for state in mymaps[24000].keys():
+        print(state)
 

@@ -77,14 +77,19 @@ for idx, dd in enumerate(dropdowns.values()):
 maps = {}
 file_io.read_topos('usgs_topos.csv', maps)
 dd = dropdowns['Map Scale'].menu
-dd['values'] = sorted(list(maps.keys()))
+dd['values'] = sorted(list(maps.keys())) # or whatever corresponding dict's keys
 dd['state'] = 'readonly'
 
-def scaleSelected(event): # control other dropdowns in response to selections
+def scaleSelected(event): # control state dropdown in response to scale selection
     dropdowns['Primary State'].menu['values'] = sorted(list(maps[int(dd.get())].keys()))
     dropdowns['Primary State'].menu.set('')
     dropdowns['Primary State'].menu['state'] = 'readonly'
 dd.bind('<<ComboboxSelected>>', scaleSelected) 
+
+def stateSelected(event): # control cell name dropdown in response to state selection
+    dropdowns['Cell Name'].menu['values'] = sorted(list(maps[int(dd.get())].keys()))
+    dropdowns['Cell Name'].menu.set('')
+    dropdowns['Cell Name'].menu['state'] = 'readonly'
 
 # need to think through how button click methods are organized. i'd love to have the
 # dropdowns in an ordered list, and then have methods that activate the "next"
