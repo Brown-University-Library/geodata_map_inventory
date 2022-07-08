@@ -8,6 +8,8 @@ from tkinter import *
 from tkinter import ttk
 # from tkinter.messagebox import showinfo  # for messageboxes, if desired
 import file_io
+from collections import OrderedDict
+from functools import partial
 
 tool_title = 'Brown University Map Collection Inventory Tool'
 
@@ -55,15 +57,17 @@ title.grid(row=0, column=0, columnspan=5, rowspan=1, pady=5)
 # -------------------- options frame ----------------------
 options = tk.Frame(content)
 options.grid(row=1, column=0, columnspan=5, rowspan=5, pady=5)
-dropdowns = {}
+dropdowns = OrderedDict()
 class LabeledDropDownMenu:
-    def __init__(self, label, menu):
+    def __init__(self, label, menu, index):
         self.label = label
         self.menu = menu
+        self.index = index
 label_names = ['Map Scale', 'Primary State', 'Cell Name', 'Map Year', 'Print Year']
 for idx, lbl in enumerate(label_names):
     dropdowns[lbl] = LabeledDropDownMenu(ttk.Label(options, text=lbl + ": ")
-        , ttk.Combobox(options, textvariable=StringVar(), state=DISABLED))
+        , ttk.Combobox(options, state=DISABLED)
+        , idx)
 # for example, dropdowns['Cell Name'].menu['state'] = 'readonly'
 
 # gridding the drop downs onto the frame
@@ -76,20 +80,60 @@ for idx, dd in enumerate(dropdowns.values()):
 # set up possible values for drop-downs
 maps = {}
 file_io.read_topos('usgs_topos.csv', maps)
-dd = dropdowns['Map Scale'].menu
-dd['values'] = sorted(list(maps.keys())) # or whatever corresponding dict's keys
-dd['state'] = 'readonly'
 
-def scaleSelected(event): # control state dropdown in response to scale selection
-    dropdowns['Primary State'].menu['values'] = sorted(list(maps[int(dd.get())].keys()))
-    dropdowns['Primary State'].menu.set('')
-    dropdowns['Primary State'].menu['state'] = 'readonly'
-dd.bind('<<ComboboxSelected>>', scaleSelected) 
+def dd_selected(cur_dd): 
+    """given a selection in a given drop-down menu, control configuration of other drop-downs"""
+    if cur_dd.index == len(label_names) - 1:  # if the selected dropdown is the last one
+        return None # exit this method without doing anything
+    # otherwise, activate the next drop down menu
+    next_dd = dropdowns[label_names[cur_dd.index + 1]]
+    # we need something like a working_dict, or maybe a loop of the currently active dds getting their values?
+    working_dict = maps
+    for dd in list(dropdowns.values())[:next_dd.index]: # loop through the currently active drop downs
+        val = dd.menu.get()
+        if val.isnumeric():
+            val = int(val)
+        working_dict = working_dict[val]  # drill down into the appropriate dict based on selections
+    vals = sorted(list(working_dict.keys()))
+    next_dd.menu['values'] = vals # populate next drop-down with possible values
+    for dd in list(dropdowns.values())[next_dd.index:]: # should maybe blank out & disable rest of drop-down menus
+        dd.menu.set('')
+        dd.menu['state'] = 'disabled'
+    if len(vals) == 1:
+        val = vals[0]
+        if val == '':
+            val = '(none)'
+        next_dd.menu.set(val)
+        next_dd.menu['state'] = 'disabled'
+        dd_selected(next_dd)
+    else:
+        next_dd.menu['state'] = 'readonly'  # take next drop-down out of disabled state
 
-def stateSelected(event): # control cell name dropdown in response to state selection
-    dropdowns['Cell Name'].menu['values'] = sorted(list(maps[int(dd.get())].keys()))
-    dropdowns['Cell Name'].menu.set('')
-    dropdowns['Cell Name'].menu['state'] = 'readonly'
+# the for loop below does not work because lambdas refer to the variable dd rather
+# than to its value at each 
+#
+# for dd in list(dropdowns.values()):
+#     dd.menu.bind('<<ComboboxSelected>>', lambda event: dd_selected(dd))
+scale_dd = dropdowns['Map Scale'].menu
+scale_dd['values'] = sorted(list(maps.keys())) # or whatever corresponding dict's keys
+scale_dd['state'] = 'readonly'
+scale_dd.bind('<<ComboboxSelected>>', lambda event: dd_selected(dropdowns['Map Scale'])) 
+
+state_dd = dropdowns['Primary State'].menu
+state_dd.bind('<<ComboboxSelected>>', lambda event: dd_selected(dropdowns['Primary State']))
+cell_name_dd = dropdowns['Cell Name'].menu
+cell_name_dd.bind('<<ComboboxSelected>>', lambda event: dd_selected(dropdowns['Cell Name']))
+map_year_dd = dropdowns['Map Year'].menu
+map_year_dd.bind('<<ComboboxSelected>>', lambda event: dd_selected(dropdowns['Map Year']))
+print_year_dd = dropdowns['Print Year'].menu
+print_year_dd.bind('<<ComboboxSelected>>', lambda event: dd_selected(dropdowns['Print Year']))
+
+# def stateSelected(event): 
+#     """control cell name dropdown in response to state selection"""
+#     dropdowns['Cell Name'].menu['values'] = sorted(list(maps[int(scale_dd.get())][state_dd.get()].keys()))
+#     dropdowns['Cell Name'].menu.set('')
+#     dropdowns['Cell Name'].menu['state'] = 'readonly'
+
 
 # need to think through how button click methods are organized. i'd love to have the
 # dropdowns in an ordered list, and then have methods that activate the "next"
