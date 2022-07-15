@@ -9,15 +9,16 @@ Completed:
 - basic prev/next functionality for incrementing drop-downs without having to click into them first
 - basic interactions (read and write) with SQLite database file on the shared drive, triggered by buttons
 - debugged the issue that prevented button-binding in a for loop
-- added prev-next buttons to each menu
-- added a "sign-in" drop down"
+- added prev-next buttons to each labeled drop-down menu to increment/decrement selected values
+- added a "sign-in" drop down for users to enter initials on each runtime
+- worked around floats issue by reading everything as strings and sorting by key
 
 To-do:
 - consider pointing to the different parts of the nested dictionary within the labeled
 drop down menu object, or just somehow rework the traverse / working dict / get values stuff
 - add a section of the GUI for displaying messages that doesn't require acknowledgement
-- disable prev and next buttons when menu is disabled
-- fill in sign-in method 
+- change we have multiple to just a duplicate flag (not necessary to store quantities)
+- update sign-in to display most recent table accordingly
 - finish the methods for table display and remove selected record
 - initial table display should show maybe the last ten records from the given user
 - to do that, the user would need to be a record-level attribute, and we'd also need a dropdown/textbox asking for initials
@@ -27,7 +28,7 @@ drop down menu object, or just somehow rework the traverse / working dict / get 
 - implement we have multiple (if 1 record, just enter quantity, else the links popup but with multiple selection and type-in qty boxes)
 - implement exception handling (new table)
 - label and comment code more
-- figure out how to handle floats for print year programmatically (not high priority)
+- how should we handle the case of a duplicate where one is damaged and the other is not?
 
 Important notes:
 - writing to the network db file does not work when someone is actively editing it in SQLite - 

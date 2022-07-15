@@ -8,11 +8,17 @@ import csv
 
 def read_users(filepath:str, users: list):
     """reads a csv file with a single column listing users, appends them to a list"""
-    with open(filepath, newline='') as f:
+    with open(filepath, 'r', newline='') as f:
         reader = csv.reader(f)
         for row in reader:
             users.append(row[0])
     return users
+
+def write_users(filepath:str, users):
+    """given an iterable set of users, writes a csv file listing them in 1 column"""
+    with open(filepath, 'w', newline='') as f:
+        writer = csv.writer(f, delimiter='\n')
+        writer.writerow(list(users))
 
 def read_topos(filepath:str, maps:dict):
     """
@@ -30,8 +36,8 @@ def read_topos(filepath:str, maps:dict):
                 'date_on_map', 'print_year', 'product_url']
 
     # read csv into df, selecting specified columns
-    topo_df = pd.read_csv(filepath, usecols=columns).fillna(-1)
-    topo_df['print_year'] = topo_df['print_year'].astype('Int64')
+    topo_df = pd.read_csv(filepath, usecols=columns, dtype=str).fillna("(none)")
+    # topo_df['print_year'] = topo_df['print_year'].astype('Int64')
     topos = topo_df.values.tolist()
 
     for topo in topos:
@@ -61,6 +67,6 @@ if __name__ == '__main__':
     # example of how to call read_topos()
     mymaps = {}
     read_topos('usgs_topos.csv', mymaps)
-    print(mymaps[24000]['Oregon']['Sparta'])
+    print(mymaps['24000']['Oregon']['Sparta'])
     # print("{:2f}".format(1971))
 

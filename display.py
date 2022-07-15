@@ -18,12 +18,24 @@ class LabeledDropDownMenu:
     index is the position of this drop-down menu in the hierarchy of menus (evaluate whether this is necessary),
     from_dict is the dictionary whose keys are the possible items in the menu.
     may also have prev and next tkinter buttons as part of this object"""
-    def __init__(self, label, menu, index, prev, next):
+    def __init__(self, label, menu, prev, next, index, next_vals):
         self.label = label
         self.menu = menu
         self.index = index
         self.prev = prev
         self.next = next
+        self.next_vals = next_vals
+
+    def disable(self):
+        self.menu['state'] = DISABLED
+        self.prev['state'] = tk.DISABLED
+        self.next['state'] = tk.DISABLED
+
+    def enable(self):
+        self.menu['state'] = 'readonly'
+        self.prev['state'] = tk.NORMAL
+        self.next['state'] = tk.NORMAL
+
 
 # from_dict of the first menu is always the outer dict. every other from_dict is
 # based on the selection of the dict above it
@@ -51,6 +63,16 @@ def traverse_dicts(depth):
         data = data[val]  # drill down into the appropriate dict based on selections
     return data
 
+def multisort(elem):
+    """sort by number if elem is numeric, sort alphabetically otherwise, and handle
+    missing values filled in as '(none)' """
+    if elem == '(none)':  # the value that was filled in for missing values in print year column
+         return 0
+    elif is_number(elem):
+        return float(elem)
+    else: 
+        return elem
+
 def dd_selected(cur_dd: LabeledDropDownMenu): 
     """given a selection in a given drop-down menu, control configuration of other drop-downs"""
     # disable the we have 1 and we have multiple buttons by default
@@ -67,27 +89,26 @@ def dd_selected(cur_dd: LabeledDropDownMenu):
     # otherwise (if the selection is for some other drop-down), we want to alter
     # the possible values of the next drop down menu in the hierarchy
     next_dd = dropdowns[label_names[cur_dd.index + 1]]
-
-    # we need something like a working_dict, or maybe a loop of the currently active dds getting their values?
-    working_dict = traverse_dicts(next_dd.index) # loop through the currently active drop downs
-    vals = sorted(list(working_dict.keys())) # the set of possible values for the next drop down
-    next_dd.menu['values'] = vals # populate next drop-down with possible values
+    next_dd.next_vals = cur_dd.next_vals[cur_dd.menu.get()]
+    vals = sorted(list(next_dd.next_vals.keys()), key=multisort)
+    next_dd.menu['values'] = vals
+    
 
     # blank out & disable all drop-down menus after whichever one was selected
     # so that selections high in the hierarchy will clear out the following menus' values
     for dd in list(dropdowns.values())[next_dd.index:]: 
         dd.menu.set('')
-        dd.menu['state'] = 'disabled'
+        dd.disable()
 
     if len(vals) == 1:  # if there's only 1 possible value for the next drop down
         # lock that value into that drop-down menu and disable it from selections
         next_dd.menu.set(vals[0])
-        next_dd.menu['state'] = 'disabled' 
+        next_dd.disable()
         # then, do what needs to be done in response to the next dd being selected
         dd_selected(next_dd)
     else: # if there are more than 1 possible values for the next drop down
         # activate the next drop down so the user can make a selection on it
-        next_dd.menu['state'] = 'readonly'  
+        next_dd.enable()  
 
 def prev_button(dd: LabeledDropDownMenu):
     """toggle the value on a given drop-down menu to its previous value"""
@@ -110,8 +131,6 @@ def record_exception():
     """
     pass
 
-    prev_button(dropdowns['Map Scale'])
-
 def remove_record(scan_id):
     """deletes a given scan id from sqlite backend"""
     map_db.remove(scan_id)
@@ -131,9 +150,6 @@ def remove_selected_record():
     #get the scan id of whatever table record is selected
     # remove_record(scan_id)
 
-    # testing "next" button for scale drop down
-    next_button(dropdowns['Map Scale'])
-
 def we_have_1():
     """
     Defines action that's taken when the We have 1 button is pressed
@@ -145,9 +161,10 @@ def we_have_1():
     # if so, do whatever we do for multiples (present links, etc).
     # if it's just one record, insert it into the table.
 
-    results = traverse_dicts(len(dropdowns)) # should be a list of tuples
+    last_dd = list(dropdowns.values())[len(dropdowns)-1]
+    results = last_dd.next_vals[last_dd.menu.get()] # should be a list of tuples
     if len(results) == 1:
-        insert_record(results[0][0])
+        insert_record(results[0][0])  # passing in just the scan ID
     else:
         pass  # do whatever we are doing to do for multiple matching records
 
@@ -166,6 +183,7 @@ def insert_record(scan_id):
     inserted = map_db.fetch(scan_id)
     if len(inserted) == 1:
         add_to_table(scan_id) # display record on table, as well as confirmation
+        print("insert success")
         pass
     else:
         print("Possible error inserting record into the database: ")
@@ -175,10 +193,17 @@ def insert_record(scan_id):
 def add_to_table(scan_id):
     pass # maybe start a list with USGS, then append the selected values 
     # tbl.insert('', 0, values=('USGS', 24000, 'AK', 'Adak', 1922, ''))
+    # will need scan id, damaged y/n, and quantity as columns as well
 
 def sign_in(event):
     """selection is made on the initials drop down"""
-    first_dd['state'] = 'readonly'
+    if initials.get() not in initials['values']: # if someone types in a new username
+        # add their entry to the drop-down of possible values
+        initials['values'] = (*initials['values'], initials.get())
+        # and save the possible values to users.csv
+        file_io.write_users('users.csv', initials['values'])
+    list(dropdowns.values())[0].enable()
+    # maybe print a confirmation message that you're signed in?
 
 # ------------------- initialize tkinter window -----------------
 
@@ -201,9 +226,11 @@ label_names = ['Map Scale', 'Primary State', 'Cell Name', 'Map Year', 'Print Yea
 for idx, lbl in enumerate(label_names):
     dropdowns[lbl] = LabeledDropDownMenu(ttk.Label(options, text=lbl + ": ")
         , ttk.Combobox(options, state=DISABLED)
+        , ttk.Button(options, text="^", state=DISABLED)
+        , ttk.Button(options, text="v", state=DISABLED)
         , idx
-        , ttk.Button(options, text="^")
-        , ttk.Button(options, text="v"))
+        , {}
+    )
 # for example, dropdowns['Cell Name'].menu['state'] = 'readonly'
 
 # gridding the drop downs onto the frame
@@ -221,8 +248,9 @@ maps = {}
 file_io.read_topos('usgs_topos.csv', maps)
 
 # initialize the first dropdown
-first_dd = list(dropdowns.items())[0][1].menu # access the first dropdown menu
-first_dd['values'] = sorted(list(maps.keys())) # or whatever corresponding dict's keys
+first_dd = list(dropdowns.values())[0] # access the first labeled dropdown menu
+first_dd.next_vals = maps
+first_dd.menu['values'] = sorted(list(maps.keys()), key=multisort) # or whatever corresponding dict's keys
 # first_dd['state'] = 'readonly'
 
 # bind each dropdown to dd_selected with itself as an argument, and each prev or
@@ -254,8 +282,11 @@ add_mult_btn.grid(row=7, column=4, rowspan=2, pady=5)
 # ---------------------- header frame ----------------------------
 header = tk.Frame(content)
 header.grid(row=0, column=0, columnspan=7, rowspan=1, pady=5)
-title = tk.Label(header, text=tool_title)
-title.grid(row=0, column=1, columnspan=5, rowspan=1, padx=100, pady=5)
+title = ttk.Label(header, text=tool_title)
+title.grid(row=0, column=0, columnspan=5, rowspan=1, padx=100, pady=5)
+
+sign_in_label = ttk.Label(header, text="Select or type your initials:")
+sign_in_label.grid(row=0, column=5)
 
 users = []
 file_io.read_users('users.csv', users)
@@ -263,12 +294,12 @@ initials = ttk.Combobox(header)
 initials['values'] = users
 initials.bind('<<ComboboxSelected>>', sign_in)
 initials.bind('<Return>', sign_in)
-initials.grid(row=0, column=0, padx=20)
+initials.grid(row=0, column=6, padx=20)
 
 # ---------------- table frame ---------------------------
 table = tk.Frame(content)
 table.grid(row=9, column=0, columnspan=7, rowspan=1, pady=5)
-tbl_cols = ('Producer', 'Map Scale', 'Primary State', 'Cell Name', 'Map Year', 'Print Year')
+tbl_cols = ('Scan ID', 'Producer', 'Map Scale', 'Primary State', 'Cell Name', 'Map Year', 'Print Year', 'Damaged', 'Quantity')
 tbl = ttk.Treeview(table, columns=tbl_cols, show='headings')
 tbl.grid(row=9, column=0, columnspan=6, rowspan=1)
 # define headings
