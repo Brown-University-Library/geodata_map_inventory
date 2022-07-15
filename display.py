@@ -176,6 +176,10 @@ def add_to_table(scan_id):
     pass # maybe start a list with USGS, then append the selected values 
     # tbl.insert('', 0, values=('USGS', 24000, 'AK', 'Adak', 1922, ''))
 
+def sign_in(event):
+    """selection is made on the initials drop down"""
+    first_dd['state'] = 'readonly'
+
 # ------------------- initialize tkinter window -----------------
 
 root = tk.Tk()
@@ -185,12 +189,6 @@ root.title(tool_title)
 # Frame containing the entire window - exists in order to customize margins
 content = tk.Frame(root)
 content.grid(row=0, column=0, padx=10, pady=20)
-
-# ---------------------- header frame ----------------------------
-header = tk.Frame(content)
-header.grid(row=0, column=0, columnspan=7, rowspan=1, pady=5)
-title = tk.Label(header, text=tool_title)
-title.grid(row=0, column=1, columnspan=5, rowspan=1, pady=5)
 
 # in the future, column and row spans should not be manually defined
 
@@ -225,9 +223,10 @@ file_io.read_topos('usgs_topos.csv', maps)
 # initialize the first dropdown
 first_dd = list(dropdowns.items())[0][1].menu # access the first dropdown menu
 first_dd['values'] = sorted(list(maps.keys())) # or whatever corresponding dict's keys
-first_dd['state'] = 'readonly'
+# first_dd['state'] = 'readonly'
 
-# bind each dropdown to dd_selected with itself as an argument
+# bind each dropdown to dd_selected with itself as an argument, and each prev or
+# next button to the prev and next button methods with each dd as an argument
 # the dd=dd statements are necessary - without it, the lambda would point to the 
 # variable dd at the end of the for loop rather than its value at each iteration.
 for dd in list(dropdowns.values()):
@@ -249,8 +248,22 @@ remove_btn.grid(row=8, column=0, columnspan=3, pady=5)
 add1_btn = ttk.Button(options, text='We have 1', command=we_have_1, state=DISABLED)
 add1_btn.grid(row=7, column=3, rowspan=2, pady=5)
 
-add_mult_btn = ttk.Button(options, text='We have multiple', command=we_have_multiple)
+add_mult_btn = ttk.Button(options, text='We have multiple', command=we_have_multiple, state=DISABLED)
 add_mult_btn.grid(row=7, column=4, rowspan=2, pady=5)
+
+# ---------------------- header frame ----------------------------
+header = tk.Frame(content)
+header.grid(row=0, column=0, columnspan=7, rowspan=1, pady=5)
+title = tk.Label(header, text=tool_title)
+title.grid(row=0, column=1, columnspan=5, rowspan=1, padx=100, pady=5)
+
+users = []
+file_io.read_users('users.csv', users)
+initials = ttk.Combobox(header)
+initials['values'] = users
+initials.bind('<<ComboboxSelected>>', sign_in)
+initials.bind('<Return>', sign_in)
+initials.grid(row=0, column=0, padx=20)
 
 # ---------------- table frame ---------------------------
 table = tk.Frame(content)

@@ -5,16 +5,19 @@ Completed:
 - reading in the USGS topo data into a nested dictionary structure
 - basic skeleton of the GUI window
 - drop-down selections narrowing down the possible options for other dropdowns
-- debugged the issue that prevented button-binding in a for loop
 - autofilling drop-downs for which there is only one possible value
 - basic prev/next functionality for incrementing drop-downs without having to click into them first
 - basic interactions (read and write) with SQLite database file on the shared drive, triggered by buttons
+- debugged the issue that prevented button-binding in a for loop
+- added prev-next buttons to each menu
+- added a "sign-in" drop down"
 
 To-do:
-- add prev/next options for the drop-downs (all? some?)
 - consider pointing to the different parts of the nested dictionary within the labeled
 drop down menu object, or just somehow rework the traverse / working dict / get values stuff
 - add a section of the GUI for displaying messages that doesn't require acknowledgement
+- disable prev and next buttons when menu is disabled
+- fill in sign-in method 
 - finish the methods for table display and remove selected record
 - initial table display should show maybe the last ten records from the given user
 - to do that, the user would need to be a record-level attribute, and we'd also need a dropdown/textbox asking for initials

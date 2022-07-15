@@ -4,6 +4,15 @@
 # inventory project.
 
 import pandas as pd
+import csv
+
+def read_users(filepath:str, users: list):
+    """reads a csv file with a single column listing users, appends them to a list"""
+    with open(filepath, newline='') as f:
+        reader = csv.reader(f)
+        for row in reader:
+            users.append(row[0])
+    return users
 
 def read_topos(filepath:str, maps:dict):
     """
