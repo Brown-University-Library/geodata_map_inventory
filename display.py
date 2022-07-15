@@ -7,13 +7,26 @@ import tkinter as tk
 from tkinter import *
 from tkinter import ttk
 # from tkinter.messagebox import showinfo  # for messageboxes, if desired
-import file_io
-import db
+import file_io, db # other files in this package
 from collections import OrderedDict
-from functools import partial
 
 tool_title = 'Brown University Map Collection Inventory Tool'
 map_db = db.Database('//files.brown.edu/DFS/Library_Shared/_geodata/maps/maps_we_have_test.db')
+
+class LabeledDropDownMenu:
+    """label is a tkinter label, menu is the corresponding tkinter combobox, 
+    index is the position of this drop-down menu in the hierarchy of menus (evaluate whether this is necessary),
+    from_dict is the dictionary whose keys are the possible items in the menu.
+    may also have prev and next tkinter buttons as part of this object"""
+    def __init__(self, label, menu, index, prev, next):
+        self.label = label
+        self.menu = menu
+        self.index = index
+        self.prev = prev
+        self.next = next
+
+# from_dict of the first menu is always the outer dict. every other from_dict is
+# based on the selection of the dict above it
 
 # -------------- methods under construction -----------------
 def is_number(s):
@@ -38,16 +51,21 @@ def traverse_dicts(depth):
         data = data[val]  # drill down into the appropriate dict based on selections
     return data
 
-def dd_selected(cur_dd): 
+def dd_selected(cur_dd: LabeledDropDownMenu): 
     """given a selection in a given drop-down menu, control configuration of other drop-downs"""
+    # disable the we have 1 and we have multiple buttons by default
     add1_btn['state'] = tk.DISABLED
     add_mult_btn['state'] = tk.DISABLED
-    if cur_dd.index == len(label_names) - 1:  # if the selected dropdown is the last one
+
+    # if the user has made a selection for the last drop-down in the hierarchy,
+    # activate the we have 1 and we have multiple buttons and exit this method
+    if cur_dd.index == len(label_names) - 1:
         add1_btn['state'] = tk.NORMAL
         add_mult_btn['state'] = tk.NORMAL
         return None # exit this method without doing anything
 
-    # otherwise, we're gonna do something with the next drop down menu
+    # otherwise (if the selection is for some other drop-down), we want to alter
+    # the possible values of the next drop down menu in the hierarchy
     next_dd = dropdowns[label_names[cur_dd.index + 1]]
 
     # we need something like a working_dict, or maybe a loop of the currently active dds getting their values?
@@ -56,20 +74,35 @@ def dd_selected(cur_dd):
     next_dd.menu['values'] = vals # populate next drop-down with possible values
 
     # blank out & disable all drop-down menus after whichever one was selected
+    # so that selections high in the hierarchy will clear out the following menus' values
     for dd in list(dropdowns.values())[next_dd.index:]: 
         dd.menu.set('')
         dd.menu['state'] = 'disabled'
 
     if len(vals) == 1:  # if there's only 1 possible value for the next drop down
-        val = vals[0]
-        # if val == '':
-        #     val = '(none)'
         # lock that value into that drop-down menu and disable it from selections
-        next_dd.menu.set(val)
+        next_dd.menu.set(vals[0])
         next_dd.menu['state'] = 'disabled' 
-        dd_selected(next_dd) # do whatever we would have done if we had manually selected the next drop-down
-    else:
-        next_dd.menu['state'] = 'readonly'  # activate the next drop down so a manual selection can be made on it
+        # then, do what needs to be done in response to the next dd being selected
+        dd_selected(next_dd)
+    else: # if there are more than 1 possible values for the next drop down
+        # activate the next drop down so the user can make a selection on it
+        next_dd.menu['state'] = 'readonly'  
+
+def prev_button(dd: LabeledDropDownMenu):
+    """toggle the value on a given drop-down menu to its previous value"""
+    # testing "prev" button for scale drop down
+    val = dd.menu.current()
+    if val != 0: # if we're not at the beginning of the list of possible values
+        dd.menu.current(val - 1) # set the drop down to the next value in the list of possible values
+        dd_selected(dd)
+
+def next_button(dd: LabeledDropDownMenu):
+    """toggle the value on a given drop-down menu to its previous value"""
+    val = dd.menu.current()
+    if val != len(dd.menu['values']) - 1: # if we're not at the end of the list of possible values
+        dd.menu.current(val + 1) # set the drop down to the next value in the list of possible values
+        dd_selected(dd)
 
 def record_exception():
     """
@@ -77,11 +110,7 @@ def record_exception():
     """
     pass
 
-    # testing "prev" button for scale drop down
-    val = scale_dd.current()
-    if val != 0: # if we're not at the beginning of the list of possible values
-        scale_dd.current(val - 1) # set the drop down to the next value in the list of possible values
-        dd_selected(dropdowns['Map Scale'])
+    prev_button(dropdowns['Map Scale'])
 
 def remove_record(scan_id):
     """deletes a given scan id from sqlite backend"""
@@ -103,10 +132,7 @@ def remove_selected_record():
     # remove_record(scan_id)
 
     # testing "next" button for scale drop down
-    val = scale_dd.current()
-    if val != len(maps.keys()) - 1: # if we're not at the end of the list of possible values
-        scale_dd.current(val + 1) # set the drop down to the next value in the list of possible values
-        dd_selected(dropdowns['Map Scale'])
+    next_button(dropdowns['Map Scale'])
 
 def we_have_1():
     """
@@ -162,93 +188,76 @@ content.grid(row=0, column=0, padx=10, pady=20)
 
 # ---------------------- header frame ----------------------------
 header = tk.Frame(content)
-header.grid(row=0, column=0, columnspan=5, rowspan=1, pady=5)
+header.grid(row=0, column=0, columnspan=7, rowspan=1, pady=5)
 title = tk.Label(header, text=tool_title)
-title.grid(row=0, column=0, columnspan=5, rowspan=1, pady=5)
+title.grid(row=0, column=1, columnspan=5, rowspan=1, pady=5)
+
+# in the future, column and row spans should not be manually defined
 
 # -------------------- options frame ----------------------
 options = tk.Frame(content)
-options.grid(row=1, column=0, columnspan=5, rowspan=5, pady=5)
+options.grid(row=1, column=0, columnspan=7, rowspan=8, pady=5)
 dropdowns = OrderedDict()
-class LabeledDropDownMenu:
-    def __init__(self, label, menu, index):
-        self.label = label
-        self.menu = menu
-        self.index = index
+
 label_names = ['Map Scale', 'Primary State', 'Cell Name', 'Map Year', 'Print Year']
 for idx, lbl in enumerate(label_names):
     dropdowns[lbl] = LabeledDropDownMenu(ttk.Label(options, text=lbl + ": ")
         , ttk.Combobox(options, state=DISABLED)
-        , idx)
+        , idx
+        , ttk.Button(options, text="^")
+        , ttk.Button(options, text="v"))
 # for example, dropdowns['Cell Name'].menu['state'] = 'readonly'
 
 # gridding the drop downs onto the frame
 for idx, dd in enumerate(dropdowns.values()):
-    r = idx%3 + 1  # creates three rows of drop downs, starting at row 1, with
-    c = int(idx/3)*2 # as many columns as are needed for the set of drop downs
-    dd.label.grid(row=r, column=c, padx=20, pady=10)
-    dd.menu.grid(row=r, column=c+1, padx=20)
+    r = (idx%3)*2 + 1  # creates three rows of drop downs, starting at row 1, with
+    c = int(idx/3)*3 # as many columns as are needed for the set of drop downs
+    dd.label.grid(row=r, column=c, rowspan=2, padx=20, pady=10)
+    dd.menu.grid(row=r, column=c+1, rowspan=2, padx=20)
+    dd.prev.grid(row=r, column=c+2)
+    dd.next.grid(row=r+1, column=c+2)
+    # want to place prev and next buttons (^ and v ?) too
 
 # set up possible values for drop-downs
 maps = {}
 file_io.read_topos('usgs_topos.csv', maps)
 
-# the for loop below does not work because lambdas refer to the variable dd rather
-# than to its value at each iteration of the loop
-#
-# for dd in list(dropdowns.values()):
-#     dd.menu.bind('<<ComboboxSelected>>', lambda event: dd_selected(dd))
-scale_dd = dropdowns['Map Scale'].menu
-scale_dd['values'] = sorted(list(maps.keys())) # or whatever corresponding dict's keys
-scale_dd['state'] = 'readonly'
-scale_dd.bind('<<ComboboxSelected>>', lambda event: dd_selected(dropdowns['Map Scale'])) 
+# initialize the first dropdown
+first_dd = list(dropdowns.items())[0][1].menu # access the first dropdown menu
+first_dd['values'] = sorted(list(maps.keys())) # or whatever corresponding dict's keys
+first_dd['state'] = 'readonly'
 
-state_dd = dropdowns['Primary State'].menu
-state_dd.bind('<<ComboboxSelected>>', lambda event: dd_selected(dropdowns['Primary State']))
-cell_name_dd = dropdowns['Cell Name'].menu
-cell_name_dd.bind('<<ComboboxSelected>>', lambda event: dd_selected(dropdowns['Cell Name']))
-map_year_dd = dropdowns['Map Year'].menu
-map_year_dd.bind('<<ComboboxSelected>>', lambda event: dd_selected(dropdowns['Map Year']))
-print_year_dd = dropdowns['Print Year'].menu
-print_year_dd.bind('<<ComboboxSelected>>', lambda event: dd_selected(dropdowns['Print Year']))
-
-# def stateSelected(event): 
-#     """control cell name dropdown in response to state selection"""
-#     dropdowns['Cell Name'].menu['values'] = sorted(list(maps[int(scale_dd.get())][state_dd.get()].keys()))
-#     dropdowns['Cell Name'].menu.set('')
-#     dropdowns['Cell Name'].menu['state'] = 'readonly'
-
-
-# need to think through how button click methods are organized. i'd love to have the
-# dropdowns in an ordered list, and then have methods that activate the "next"
-# menus, or if making a selection of something earlier, deactivate previous ones
-# Except at any given time, someone could be choosing any of the buttons. so i 
-# do need named references to each one, i think.  Could still order them somehow
-# though.  
+# bind each dropdown to dd_selected with itself as an argument
+# the dd=dd statements are necessary - without it, the lambda would point to the 
+# variable dd at the end of the for loop rather than its value at each iteration.
+for dd in list(dropdowns.values()):
+    dd.menu.bind('<<ComboboxSelected>>', lambda event, dd=dd: dd_selected(dd))
+    dd.prev.configure(command = lambda dd=dd: prev_button(dd))
+    dd.next.configure(command = lambda dd=dd: next_button(dd))  
 
 dmgvar = BooleanVar(value=False)
 damaged = ttk.Checkbutton(options, text="Something is significantly damaged", 
             variable=dmgvar, onvalue=True)
-damaged.grid(row=3, column=2, columnspan=2)
+damaged.grid(row=5, column=3, columnspan=3, rowspan=2)
 
 exception_btn = ttk.Button(options, text='Record an exception', command=record_exception)
-exception_btn.grid(row=4, column=0, pady=5)
+exception_btn.grid(row=7, column=0, columnspan=3, pady=5)
 
 remove_btn = ttk.Button(options, text='Remove selected record', command=remove_selected_record)
-remove_btn.grid(row=5, column=0, pady=5)
+remove_btn.grid(row=8, column=0, columnspan=3, pady=5)
 
 add1_btn = ttk.Button(options, text='We have 1', command=we_have_1, state=DISABLED)
-add1_btn.grid(row=4, column=2, rowspan=2, pady=5)
+add1_btn.grid(row=7, column=3, rowspan=2, pady=5)
 
 add_mult_btn = ttk.Button(options, text='We have multiple', command=we_have_multiple)
-add_mult_btn.grid(row=4, column=3, rowspan=2, pady=5)
+add_mult_btn.grid(row=7, column=4, rowspan=2, pady=5)
 
 # ---------------- table frame ---------------------------
 table = tk.Frame(content)
-table.grid(row=6, column=0, columnspan=5, rowspan=1, pady=5)
+table.grid(row=9, column=0, columnspan=7, rowspan=1, pady=5)
 tbl_cols = ('Producer', 'Map Scale', 'Primary State', 'Cell Name', 'Map Year', 'Print Year')
 tbl = ttk.Treeview(table, columns=tbl_cols, show='headings')
-tbl.grid(row=6, column=0, columnspan=4, rowspan=1)
+tbl.grid(row=9, column=0, columnspan=6, rowspan=1)
 # define headings
 for col in tbl_cols:
     tbl.heading(col, text=col)
@@ -256,7 +265,7 @@ for col in tbl_cols:
 # add a scrollbar
 tbl_scroll = ttk.Scrollbar(table, orient=tk.VERTICAL, command=tbl.yview)
 tbl.configure(yscroll=tbl_scroll.set)
-tbl_scroll.grid(row=6, column=4, rowspan=1, sticky='ns') # one column to the right of tbl
+tbl_scroll.grid(row=9, column=6, rowspan=1, sticky='ns') # one column to the right of tbl
 
 # --------------------- testing stuff out ----------------------
 
