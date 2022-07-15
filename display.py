@@ -50,17 +50,11 @@ def is_number(s):
     except ValueError:
         return False
 
-def traverse_dicts(depth):
-    """traverses the nested dictionary structure based on whatever selections have
-    been made in the drop-downs.  It's assumed that this method will only be called
-    if selections have already been made down to the given depth. returns whatever
-    is at that depth of the structure (either another dictionary, or a value list)"""
-    data = maps
-    for dd in list(dropdowns.values())[:depth]: # loop through the currently active drop downs
-        val = dd.menu.get() # get() method seems to always return strings, but some of the data is numeric
-        if is_number(val): # so if it is numeric, we convert the stringed number to an integer
-            val = int(float(val))
-        data = data[val]  # drill down into the appropriate dict based on selections
+def grab_dd_values():
+    """traverses the drop-downs in order, returns a list of the selected values"""
+    data = []
+    for dd in dropdowns.values():
+        data.append(dd.menu.get()) 
     return data
 
 def multisort(elem):
@@ -137,7 +131,7 @@ def remove_record(scan_id):
     remaining = map_db.fetch(scan_id)
     if len(remaining) == 0:
         # call the method to display confirmation of removal
-        pass
+        print("removal success") # replace with message on gui display
     else:
         print("Possible error removing record from the database: ")
         print(remaining)
@@ -149,6 +143,11 @@ def remove_selected_record():
     """
     #get the scan id of whatever table record is selected
     # remove_record(scan_id)
+    selected = tbl.focus()
+    removal_id = tbl.item(selected, 'values')[0]
+    # should print a confirmation message before executing the removal
+    remove_record(removal_id)
+    tbl.delete(tbl.selection())
 
 def we_have_1():
     """
@@ -166,7 +165,7 @@ def we_have_1():
     if len(results) == 1:
         insert_record(results[0][0])  # passing in just the scan ID
     else:
-        pass  # do whatever we are doing to do for multiple matching records
+        print("multiple matches")  # do whatever we are doing to do for multiple matching records
 
 def we_have_multiple():
     """
@@ -179,6 +178,10 @@ def insert_record(scan_id):
     insertion by selecting that record from the db, and then calls methods to add
     that record to the table frame and print out a message, etc"""
     # maybe insert, then fetch for confirmation?
+    before = map_db.fetch(scan_id)
+    if len(before) > 0:
+        print("that map has already been recorded")
+        return None
     map_db.insert(scan_id)
     inserted = map_db.fetch(scan_id)
     if len(inserted) == 1:
@@ -191,9 +194,14 @@ def insert_record(scan_id):
     pass
 
 def add_to_table(scan_id):
-    pass # maybe start a list with USGS, then append the selected values 
-    # tbl.insert('', 0, values=('USGS', 24000, 'AK', 'Adak', 1922, ''))
+    """insert info about a map we have into the display table"""
+    tbl_vals = [scan_id, 'USGS']
+    tbl_vals.extend(grab_dd_values())
+    # replace 'no' with dupe_var once created 
+    tbl_vals.extend([dmgvar.get(), 'no'])
+    tbl.insert('', 0, values=tbl_vals)
     # will need scan id, damaged y/n, and quantity as columns as well
+    # ('Scan ID', 'Producer', 'Map Scale', 'Primary State', 'Cell Name', 'Map Year', 'Print Year', 'Damaged', 'Duplicate')
 
 def sign_in(event):
     """selection is made on the initials drop down"""
@@ -299,7 +307,7 @@ initials.grid(row=0, column=6, padx=20)
 # ---------------- table frame ---------------------------
 table = tk.Frame(content)
 table.grid(row=9, column=0, columnspan=7, rowspan=1, pady=5)
-tbl_cols = ('Scan ID', 'Producer', 'Map Scale', 'Primary State', 'Cell Name', 'Map Year', 'Print Year', 'Damaged', 'Quantity')
+tbl_cols = ('Scan ID', 'Producer', 'Map Scale', 'Primary State', 'Cell Name', 'Map Year', 'Print Year', 'Damaged', 'Duplicate')
 tbl = ttk.Treeview(table, columns=tbl_cols, show='headings')
 tbl.grid(row=9, column=0, columnspan=6, rowspan=1)
 # define headings
