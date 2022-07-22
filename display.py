@@ -10,7 +10,7 @@ from tkinter import ttk
 import file_io, db # other files in this package
 from collections import OrderedDict
 from datetime import datetime
-from pytz import timezone
+import webbrowser
 
 tool_title = 'Brown University Map Collection Inventory Tool'
 map_db = db.Database('//files.brown.edu/DFS/Library_Shared/_geodata/maps/maps_we_have_test.db')
@@ -138,25 +138,18 @@ def remove_record(scan_id):
         dialogContents.set("Possible error removing map " + str(scan_id) + " from the database.")
     pass
 
-def remove(selection, window):
-    removal_id = tbl.item(selection, 'values')[0]
+def remove(removal_id, window):
     remove_record(removal_id)
     tbl.delete(tbl.selection())
     window.destroy()
 
-def confirm_removal(selection):
+def confirm_removal(removal_id):
     top = Toplevel(root)
+    top.wm_transient(root)
     top.geometry("400x250")
     top.title("Confirm removal")
-
-    # x = root.winfo_x()
-    # y = root.winfo_y()
-    # w = top.winfo_width()
-    # h = top.winfo_height()  
-    # top.geometry("%dx%d+%d+%d" % (w, h, x + 50, y + 50))
-    
-    ttk.Button(top, text= "Yes, remove this record", command=lambda:remove(selection, top)).place(relx=0.5, rely=0.5, anchor=CENTER)
-    # Button(top, text= "No, go back", command=top.destroy()).place(x=200, y=200)
+    Label(top, text = "Please confirm that you want to remove map " + removal_id + ".").place(relx=0.5, rely=0.3, anchor=CENTER)
+    Button(top, text= "Yes, remove this record", foreground='#f00', command=lambda:remove(removal_id, top)).place(relx=0.5, rely=0.5, anchor=CENTER)
     
 def remove_selected_record():
     """
@@ -164,12 +157,12 @@ def remove_selected_record():
     """
     selected = tbl.selection()
     if len(selected) == 1:
-        confirm_removal(selected)
+        confirm_removal(tbl.item(selected, 'values')[0]) # open confirmation window
     elif len(selected) == 0:
         dialog['foreground'] = '#f00' # text will be red
         dialogContents.set("Nothing is selected.  Click on a row in the table to select it.")
-    else:
-        dialog['foreground'] = '#f00' # text will be yellow
+    else: # if more than 1 item from the table is selected when the Remove button is pressed
+        dialog['foreground'] = '#f00' # text will be red
         dialogContents.set("Cannot remove more than one record at a time.")
 
 def we_have_1():
@@ -188,7 +181,29 @@ def we_have_1():
     if len(results) == 1:
         insert_record(results[0][0])  # passing in just the scan ID
     else:
-        print("multiple matches")  # do whatever we are doing to do for multiple matching records
+        select_from_multiple(results)
+
+def select_from_multiple(results):
+    """create the pop-up window where the user chooses which map record matches
+    the map physically in hand by opening up the links to the different options"""
+    win = Toplevel(root)
+    win.wm_transient(root)
+    win.title("Multiple matches found")
+    ttk.Label(win, text="The USGS database has multiple records for that map.  Please select the record that matches the map in hand.").grid(row=0, columnspan=2, pady=20, padx=20)
+    choices = StringVar()
+    record_btn = Button(win, text="Record this map", command=lambda: record_this_map(choices.get(), win), state=DISABLED)
+
+    for idx, result in enumerate(results):
+        result_id = result[0]
+        result_link=result[1]
+        ttk.Radiobutton(win, text=result_id, variable=choices, command=lambda:record_btn.configure(state=NORMAL), value=result_id).grid(row=idx+1, column=0, pady=5, sticky='e')
+        Button(win, text="Open pdf in browser", command=lambda result_link=result_link: webbrowser.open_new_tab(result_link)).grid(row=idx+1, column=1, sticky='w')
+    
+    record_btn.grid(row=idx+2, column=0, columnspan=2, pady=20)
+
+def record_this_map(scan_id, window):
+    window.destroy()
+    insert_record(scan_id)
 
 def insert_record(scan_id):
     """inserts record for map we have on hand into sqlite backend, confirms the
@@ -210,11 +225,12 @@ def insert_record(scan_id):
         add_to_table(scan_id) # display record on table, as well as confirmation
         dialog['foreground'] = '#0f0' # text will be green
         dialogContents.set("Map " + str(scan_id) + " successfully recorded!")
-        pass
+        dmgvar.set(False)
+        dupevar.set(False)
+
     else:
         dialog['foreground'] = '#f00' # text will be red
         dialogContents.set("Possible error inserting map " + str(scan_id) + " into the database.")
-    pass
 
 def add_to_table(scan_id):
     """insert info about a map we have into the display table"""
@@ -251,7 +267,7 @@ def populate_most_recent(initials):
     rows = map_db.fetch_most_recent(initials)
     for row in reversed(rows):
         tbl_vals = [row[0], 'USGS']
-        tbl_vals.extend(row[1:-2])
+        tbl_vals.extend(["(none)" if val is None else val for val in row[1:-2]]) # convert empty values from database to (none) in table
         tbl_vals.extend([bool(val) for val in row[-2:]]) # convert 1s and 0s from database to True and False for table
         tbl.insert('', 0, values=tbl_vals)
 
@@ -331,7 +347,7 @@ for dd in list(dropdowns.values()):
     dd.next.configure(command = lambda dd=dd: next_button(dd))  
 
 dmgvar = BooleanVar(value=False)
-damaged = ttk.Checkbutton(options, text="Something is significantly damaged", 
+damaged = ttk.Checkbutton(options, text="This map is significantly damaged", 
             variable=dmgvar, onvalue=True)
 damaged.grid(row=5, column=3, columnspan=3, rowspan=1)
 
@@ -368,67 +384,6 @@ for col in tbl_cols:
 tbl_scroll = ttk.Scrollbar(table, orient=tk.VERTICAL, command=tbl.yview)
 tbl.configure(yscroll=tbl_scroll.set)
 tbl_scroll.grid(row=9, column=6, rowspan=1, sticky='ns') # one column to the right of tbl
-
-# --------------------- testing stuff out ----------------------
-
-# ct_years = {
-#     'USA': [1918, 1920, 1999]
-#     , 'Canada': [1955, 1988, 2012]
-#     , 'Australia': [1899, 1928, 1972]
-# }
-
-# othervar = StringVar()
-# other = ttk.Combobox(content, textvariable=othervar, state=DISABLED)
-# # other['values'] = []
-# # other.state(["readonly"])
-# other.grid(row=0, column=4)
-
-# countryvar = StringVar()
-# country = ttk.Combobox(content, textvariable=countryvar)
-# country['values'] = ['USA', 'Canada', 'Australia']
-# country.state(["readonly"])
-# country.grid(row=0, column=3)
-# def countrySelected(event): # control other dropdowns in response to selections
-#     other['values'] = ct_years[country.get()]
-#     other.set('') # or we may want to set it to the first elem of the list
-#     other['state'] = 'readonly'
-# country.bind('<<ComboboxSelected>>', countrySelected) 
-
-# # define columns for table display
-# columns = ('first_name', 'last_name', 'email')
-
-# tree = ttk.Treeview(content, columns=columns, show='headings')
-
-# # define headings
-# for col in columns:
-#     tree.heading(col, text=col)
-
-# # generate sample data
-# contacts = []
-# for n in range(1, 100):
-#     contacts.append((f'first {n}', f'last {n}', f'email{n}@example.com'))
-
-# # add data to the treeview
-# for contact in contacts:
-#     tree.insert('', tk.END, values=contact) # replace tk.END with 0 for addFirst
-
-
-# def item_selected(event): # aka when rows of the table display are selected
-#     for selected_item in tree.selection():
-#         item = tree.item(selected_item)
-#         record = item['values'] # list of the values in the row (could be appended)
-#         # # show a message
-#         # showinfo(title='Information', message=','.join(record))
-
-
-# tree.bind('<<TreeviewSelect>>', item_selected)
-
-# tree.grid(row=2, column=1, sticky='nsew', pady=10)
-
-# # add a scrollbar
-# scrollbar = ttk.Scrollbar(content, orient=tk.VERTICAL, command=tree.yview)
-# tree.configure(yscroll=scrollbar.set)
-# scrollbar.grid(row=2, column=2, sticky='ns') # one column to the right of tree
 
 # run the app
 root.mainloop()

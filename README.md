@@ -19,11 +19,11 @@ Completed:
 - signing in updates table display with 10 most recently recorded maps
 - remove method checks for number of items selected and prints messages if it's anything other than 1
 - a confirmation window pops up to confirm removal before executing it
+- functionality for multiple matching records (pop-up window with links and radiobutton)
 
 To-do:
-- reset dmgvar and dupevar after each map is recorded?
-- any configuration things we want for the rmeoval confirmation window?
-- implement we have 1 when there are multiple (new pop-up with links, dmg boxes, mutually exclusive selection, disabled quantity boxes)
+- the checkboxes for damage and duplicate are reset to false after each map is recorded
+- aesthetics / config stuff for removal confirmation window or multiple matches window?
 - implement exception handling (new table)
 - label and comment code more
 
