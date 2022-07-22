@@ -13,15 +13,16 @@ Completed:
 - debugged the issue that prevented button-binding in a for loop
 - added a "sign-in" drop down for users to enter initials on each runtime, which are saved locally
 - worked around floats issue by reading everything as strings and sorting by key
-
+- changed "we have multiple" to just a duplicate checkbox (not necessary to store quantities)
+- added a section of the GUI for displaying messages of success or error
+- updated database to include recorded_by, recorded_time, is_damaged, and is_duplicate columns
+- signing in updates table display with 10 most recently recorded maps
+- remove method checks for number of items selected and prints messages if it's anything other than 1
+- a confirmation window pops up to confirm removal before executing it
 
 To-do:
-- add a section of the GUI for displaying messages, ideally that would fade out after a short time
-- change "we have multiple" to just a duplicate checkbox (not necessary to store quantities)
-- update sign-in to display most recent table (last ten records from the given user)
-- to do that, the user would need to be a record-level attribute, and we'd also need a dropdown/textbox asking for initials
-- modify insert method to check whether the database already has a record with that scan id.  
-- implement damage handling (new table or new column?)
+- reset dmgvar and dupevar after each map is recorded?
+- any configuration things we want for the rmeoval confirmation window?
 - implement we have 1 when there are multiple (new pop-up with links, dmg boxes, mutually exclusive selection, disabled quantity boxes)
 - implement exception handling (new table)
 - label and comment code more

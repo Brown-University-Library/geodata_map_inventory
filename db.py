@@ -14,13 +14,20 @@ class Database:
             "SELECT * FROM usgs_topos_we_have WHERE scan_id = " + str(scan_id))
         rows = self.cur.fetchall()
         return rows
+    
+    def fetch_most_recent(self, initials):
+        self.cur.execute(
+            "SELECT scan_id, map_scale, primary_state, cell_name, date_on_map, print_year, is_damaged, is_duplicate " + 
+            "FROM usgs_topos_we_have WHERE recorded_by = ? ORDER BY recorded_time DESC LIMIT 10", (initials,))
+        rows = self.cur.fetchall()
+        return rows
 
     # worth noting that execute() does have a two-argument mode where the first arg is a wild-carded SQL
     # and the second arg is a tuple listing variables or values you want to sub in for those wild cards. Example:
     # self.cur.execute("UPDATE routers SET hostname = ?, brand = ? WHERE id = ?", (hostname, brand, id))
 
-    def insert(self, scan_id):
-        self.cur.execute("INSERT INTO usgs_topos_we_have SELECT * FROM all_usgs_topos WHERE scan_id = " + str(scan_id))
+    def insert(self, scan_id, recorded_by, recorded_time, is_damaged, is_duplicate):
+        self.cur.execute("INSERT INTO usgs_topos_we_have SELECT *, ?, ?, ?, ? FROM all_usgs_topos WHERE scan_id = ?", (recorded_by, recorded_time, is_damaged, is_duplicate, scan_id))
         self.conn.commit()
 
     def remove(self, scan_id):

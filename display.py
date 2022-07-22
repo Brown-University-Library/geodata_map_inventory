@@ -9,6 +9,8 @@ from tkinter import ttk
 # from tkinter.messagebox import showinfo  # for messageboxes, if desired
 import file_io, db # other files in this package
 from collections import OrderedDict
+from datetime import datetime
+from pytz import timezone
 
 tool_title = 'Brown University Map Collection Inventory Tool'
 map_db = db.Database('//files.brown.edu/DFS/Library_Shared/_geodata/maps/maps_we_have_test.db')
@@ -69,15 +71,13 @@ def multisort(elem):
 
 def dd_selected(cur_dd: LabeledDropDownMenu): 
     """given a selection in a given drop-down menu, control configuration of other drop-downs"""
-    # disable the we have 1 and we have multiple buttons by default
+    # disable the we have 1 button by default
     add1_btn['state'] = tk.DISABLED
-    add_mult_btn['state'] = tk.DISABLED
 
     # if the user has made a selection for the last drop-down in the hierarchy,
     # activate the we have 1 and we have multiple buttons and exit this method
     if cur_dd.index == len(label_names) - 1:
         add1_btn['state'] = tk.NORMAL
-        add_mult_btn['state'] = tk.NORMAL
         return None # exit this method without doing anything
 
     # otherwise (if the selection is for some other drop-down), we want to alter
@@ -130,24 +130,47 @@ def remove_record(scan_id):
     map_db.remove(scan_id)
     remaining = map_db.fetch(scan_id)
     if len(remaining) == 0:
-        # call the method to display confirmation of removal
-        print("removal success") # replace with message on gui display
+        # call the method to display confirmation of removal window
+        dialog['foreground'] = '#0f0' # text will be green
+        dialogContents.set("Map " + str(scan_id) + " successfully removed.")
     else:
-        print("Possible error removing record from the database: ")
-        print(remaining)
+        dialog['foreground'] = '#f00' # text will be red
+        dialogContents.set("Possible error removing map " + str(scan_id) + " from the database.")
     pass
 
+def remove(selection, window):
+    removal_id = tbl.item(selection, 'values')[0]
+    remove_record(removal_id)
+    tbl.delete(tbl.selection())
+    window.destroy()
+
+def confirm_removal(selection):
+    top = Toplevel(root)
+    top.geometry("400x250")
+    top.title("Confirm removal")
+
+    # x = root.winfo_x()
+    # y = root.winfo_y()
+    # w = top.winfo_width()
+    # h = top.winfo_height()  
+    # top.geometry("%dx%d+%d+%d" % (w, h, x + 50, y + 50))
+    
+    ttk.Button(top, text= "Yes, remove this record", command=lambda:remove(selection, top)).place(relx=0.5, rely=0.5, anchor=CENTER)
+    # Button(top, text= "No, go back", command=top.destroy()).place(x=200, y=200)
+    
 def remove_selected_record():
     """
     Defines action that's taken when the Remove selected record button is pressed
     """
-    #get the scan id of whatever table record is selected
-    # remove_record(scan_id)
-    selected = tbl.focus()
-    removal_id = tbl.item(selected, 'values')[0]
-    # should print a confirmation message before executing the removal
-    remove_record(removal_id)
-    tbl.delete(tbl.selection())
+    selected = tbl.selection()
+    if len(selected) == 1:
+        confirm_removal(selected)
+    elif len(selected) == 0:
+        dialog['foreground'] = '#f00' # text will be red
+        dialogContents.set("Nothing is selected.  Click on a row in the table to select it.")
+    else:
+        dialog['foreground'] = '#f00' # text will be yellow
+        dialogContents.set("Cannot remove more than one record at a time.")
 
 def we_have_1():
     """
@@ -167,12 +190,6 @@ def we_have_1():
     else:
         print("multiple matches")  # do whatever we are doing to do for multiple matching records
 
-def we_have_multiple():
-    """
-    Defines action that's taken when the We have multiple button is pressed
-    """
-    pass
-
 def insert_record(scan_id):
     """inserts record for map we have on hand into sqlite backend, confirms the
     insertion by selecting that record from the db, and then calls methods to add
@@ -180,17 +197,23 @@ def insert_record(scan_id):
     # maybe insert, then fetch for confirmation?
     before = map_db.fetch(scan_id)
     if len(before) > 0:
-        print("that map has already been recorded")
+        dialog['foreground'] = '#f00' # text will be red
+        dialogContents.set("Map " + str(scan_id) + " has already been recorded.")
         return None
-    map_db.insert(scan_id)
+    map_db.insert(scan_id
+                , initials.get() # recorded_by
+                , int(datetime.now().strftime('%Y%m%d%H%M')) # recorded_time
+                , int(dmgvar.get()) # is_damaged (0 or 1)
+                , int(dupevar.get())) # is_duplicate (0 or 1)
     inserted = map_db.fetch(scan_id)
     if len(inserted) == 1:
         add_to_table(scan_id) # display record on table, as well as confirmation
-        print("insert success")
+        dialog['foreground'] = '#0f0' # text will be green
+        dialogContents.set("Map " + str(scan_id) + " successfully recorded!")
         pass
     else:
-        print("Possible error inserting record into the database: ")
-        print(inserted)
+        dialog['foreground'] = '#f00' # text will be red
+        dialogContents.set("Possible error inserting map " + str(scan_id) + " into the database.")
     pass
 
 def add_to_table(scan_id):
@@ -198,7 +221,7 @@ def add_to_table(scan_id):
     tbl_vals = [scan_id, 'USGS']
     tbl_vals.extend(grab_dd_values())
     # replace 'no' with dupe_var once created 
-    tbl_vals.extend([dmgvar.get(), 'no'])
+    tbl_vals.extend([dmgvar.get(), dupevar.get()])
     tbl.insert('', 0, values=tbl_vals)
     # will need scan id, damaged y/n, and quantity as columns as well
     # ('Scan ID', 'Producer', 'Map Scale', 'Primary State', 'Cell Name', 'Map Year', 'Print Year', 'Damaged', 'Duplicate')
@@ -208,10 +231,31 @@ def sign_in(event):
     if initials.get() not in initials['values']: # if someone types in a new username
         # add their entry to the drop-down of possible values
         initials['values'] = (*initials['values'], initials.get())
-        # and save the possible values to users.csv
+        # and save the new set of possible values to users.csv
         file_io.write_users('users.csv', initials['values'])
-    list(dropdowns.values())[0].enable()
+    list(dropdowns.values())[0].enable() # enable the first drop-down menu
+
     # maybe print a confirmation message that you're signed in?
+    dialog['foreground'] = '#0f0' # text will be green
+    dialogContents.set("Welcome, " + initials.get() + "!")
+
+    # also, call the method to update table with that person's stuff
+    populate_most_recent(initials.get())
+
+def populate_most_recent(initials):
+    # clear whatever's currently in the table
+    for item in tbl.get_children():
+        tbl.delete(item)
+    
+    # grab the most recent maps recorded by the given initials, add them to table
+    rows = map_db.fetch_most_recent(initials)
+    for row in reversed(rows):
+        tbl_vals = [row[0], 'USGS']
+        tbl_vals.extend(row[1:-2])
+        tbl_vals.extend([bool(val) for val in row[-2:]]) # convert 1s and 0s from database to True and False for table
+        tbl.insert('', 0, values=tbl_vals)
+
+COL_WIDTH = 7
 
 # ------------------- initialize tkinter window -----------------
 
@@ -225,9 +269,26 @@ content.grid(row=0, column=0, padx=10, pady=20)
 
 # in the future, column and row spans should not be manually defined
 
+# ---------------------- header frame ----------------------------
+header = tk.Frame(content)
+header.grid(row=0, column=0, columnspan=COL_WIDTH, rowspan=1, pady=5)
+title = ttk.Label(header, text=tool_title)
+title.grid(row=0, column=0, columnspan=5, rowspan=1, padx=100, pady=5)
+
+sign_in_label = ttk.Label(header, text="Select or type your initials:")
+sign_in_label.grid(row=0, column=5)
+
+users = []
+file_io.read_users('users.csv', users)
+initials = ttk.Combobox(header)
+initials['values'] = users
+initials.bind('<<ComboboxSelected>>', sign_in)
+initials.bind('<Return>', sign_in)
+initials.grid(row=0, column=6, padx=20)
+
 # -------------------- options frame ----------------------
 options = tk.Frame(content)
-options.grid(row=1, column=0, columnspan=7, rowspan=8, pady=5)
+options.grid(row=1, column=0, columnspan=COL_WIDTH, rowspan=8, pady=5)
 dropdowns = OrderedDict()
 
 label_names = ['Map Scale', 'Primary State', 'Cell Name', 'Map Year', 'Print Year']
@@ -249,7 +310,6 @@ for idx, dd in enumerate(dropdowns.values()):
     dd.menu.grid(row=r, column=c+1, rowspan=2, padx=20)
     dd.prev.grid(row=r, column=c+2)
     dd.next.grid(row=r+1, column=c+2)
-    # want to place prev and next buttons (^ and v ?) too
 
 # set up possible values for drop-downs
 maps = {}
@@ -262,8 +322,8 @@ first_dd.menu['values'] = sorted(list(maps.keys()), key=multisort) # or whatever
 # first_dd['state'] = 'readonly'
 
 # bind each dropdown to dd_selected with itself as an argument, and each prev or
-# next button to the prev and next button methods with each dd as an argument
-# the dd=dd statements are necessary - without it, the lambda would point to the 
+# next button to the prev and next button methods with each dd as an argument.
+# The dd=dd statements are necessary - without them, the lambda would point to the 
 # variable dd at the end of the for loop rather than its value at each iteration.
 for dd in list(dropdowns.values()):
     dd.menu.bind('<<ComboboxSelected>>', lambda event, dd=dd: dd_selected(dd))
@@ -273,7 +333,12 @@ for dd in list(dropdowns.values()):
 dmgvar = BooleanVar(value=False)
 damaged = ttk.Checkbutton(options, text="Something is significantly damaged", 
             variable=dmgvar, onvalue=True)
-damaged.grid(row=5, column=3, columnspan=3, rowspan=2)
+damaged.grid(row=5, column=3, columnspan=3, rowspan=1)
+
+dupevar = BooleanVar(value=False)
+duplicate = ttk.Checkbutton(options, text="We have duplicate(s) for this map", 
+            variable=dupevar, onvalue=True)
+duplicate.grid(row=6, column=3, columnspan=3, rowspan=1)
 
 exception_btn = ttk.Button(options, text='Record an exception', command=record_exception)
 exception_btn.grid(row=7, column=0, columnspan=3, pady=5)
@@ -281,28 +346,13 @@ exception_btn.grid(row=7, column=0, columnspan=3, pady=5)
 remove_btn = ttk.Button(options, text='Remove selected record', command=remove_selected_record)
 remove_btn.grid(row=8, column=0, columnspan=3, pady=5)
 
-add1_btn = ttk.Button(options, text='We have 1', command=we_have_1, state=DISABLED)
-add1_btn.grid(row=7, column=3, rowspan=2, pady=5)
+add1_btn = ttk.Button(options, text='Record this map', command=we_have_1, state=DISABLED)
+add1_btn.grid(row=7, column=3, rowspan=1, columnspan=3, pady=5)
 
-add_mult_btn = ttk.Button(options, text='We have multiple', command=we_have_multiple, state=DISABLED)
-add_mult_btn.grid(row=7, column=4, rowspan=2, pady=5)
-
-# ---------------------- header frame ----------------------------
-header = tk.Frame(content)
-header.grid(row=0, column=0, columnspan=7, rowspan=1, pady=5)
-title = ttk.Label(header, text=tool_title)
-title.grid(row=0, column=0, columnspan=5, rowspan=1, padx=100, pady=5)
-
-sign_in_label = ttk.Label(header, text="Select or type your initials:")
-sign_in_label.grid(row=0, column=5)
-
-users = []
-file_io.read_users('users.csv', users)
-initials = ttk.Combobox(header)
-initials['values'] = users
-initials.bind('<<ComboboxSelected>>', sign_in)
-initials.bind('<Return>', sign_in)
-initials.grid(row=0, column=6, padx=20)
+dialogContents = StringVar()
+dialog = ttk.Label(options)
+dialog['textvariable'] = dialogContents
+dialog.grid(row=8, column=3, columnspan=3, rowspan=1, pady=5)
 
 # ---------------- table frame ---------------------------
 table = tk.Frame(content)
