@@ -11,7 +11,7 @@ Completed:
 - connected insert to the table display, and got remove selected to be functional
 - the insert and remove methods confirm that the remote database was changed appropriately before proceeding
 - debugged the issue that prevented button-binding in a for loop
-- added a "sign-in" drop down for users to enter initials on each runtime, which are saved locally
+- added a "sign-in" drop down for users to select initials on each runtime based on a local csv
 - worked around floats issue by reading everything as strings and sorting by key
 - changed "we have multiple" to just a duplicate checkbox (not necessary to store quantities)
 - added a section of the GUI for displaying messages of success or error
@@ -22,9 +22,11 @@ Completed:
 - functionality for multiple matching records (pop-up window with links and radiobutton)
 
 To-do:
-- the checkboxes for damage and duplicate are reset to false after each map is recorded
-- aesthetics / config stuff for removal confirmation window or multiple matches window?
-- implement exception handling (new table)
+- implement exception handling (new table, new window, loop through and make labeled entries, producer radiobutton with other option, carry GNIS over, potentially record other attributes that we don't record for USGS topos, do some pre-loading for exceptions ())
+- should the pre-loading carry over stuff that's locked in? probably not
+- should the pre-loading disable whatever is pre-loaded from being manipulated? maybe
+- AMS exceptions should record Series and the Sheet and the Edition
+- 222474 is an army map in the USGS system
 - label and comment code more
 
 Important notes:

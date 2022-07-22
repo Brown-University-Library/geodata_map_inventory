@@ -291,12 +291,12 @@ header.grid(row=0, column=0, columnspan=COL_WIDTH, rowspan=1, pady=5)
 title = ttk.Label(header, text=tool_title)
 title.grid(row=0, column=0, columnspan=5, rowspan=1, padx=100, pady=5)
 
-sign_in_label = ttk.Label(header, text="Select or type your initials:")
+sign_in_label = ttk.Label(header, text="Select your initials to sign in:")
 sign_in_label.grid(row=0, column=5)
 
 users = []
 file_io.read_users('users.csv', users)
-initials = ttk.Combobox(header)
+initials = ttk.Combobox(header, state='readonly')
 initials['values'] = users
 initials.bind('<<ComboboxSelected>>', sign_in)
 initials.bind('<Return>', sign_in)
@@ -322,10 +322,10 @@ for idx, lbl in enumerate(label_names):
 for idx, dd in enumerate(dropdowns.values()):
     r = (idx%3)*2 + 1  # creates three rows of drop downs, starting at row 1, with
     c = int(idx/3)*3 # as many columns as are needed for the set of drop downs
-    dd.label.grid(row=r, column=c, rowspan=2, padx=20, pady=10)
-    dd.menu.grid(row=r, column=c+1, rowspan=2, padx=20)
-    dd.prev.grid(row=r, column=c+2)
-    dd.next.grid(row=r+1, column=c+2)
+    dd.label.grid(row=r, column=c, rowspan=2, padx=20, pady=10, sticky='e')
+    dd.menu.grid(row=r, column=c+1, rowspan=2, padx=10)
+    dd.prev.grid(row=r, column=c+2, sticky='w')
+    dd.next.grid(row=r+1, column=c+2, sticky='w')
 
 # set up possible values for drop-downs
 maps = {}
