@@ -170,15 +170,33 @@ def record_exception():
     options.grid(row=1, column=0, columnspan=COL_WIDTH, rowspan=8, pady=5)
 
     # producer radiobutton
-    ttk.Label(content, text="Map producer:").grid(row=1, column=0, pady=5)
+    ttk.Label(content, text="Map producer:").grid(row=1, column=0, padx=10)
     producer = StringVar()
     producers = ['USGS', 'DMA', 'AMS', 'BLM']
     for idx, prod in enumerate(producers):
-        ttk.Radiobutton(options, text=prod, variable=producer, value=prod).grid(row=idx+2, column=0, pady=5, sticky='e')
+        ttk.Radiobutton(options, text=prod, variable=producer, value=prod).grid(row=idx+2, column=0, pady=5, padx=10)
 
     # # labeled drop down menus for scale, state, and cell name
-    ttk.Label(options, text="Map Scale:")
+    ttk.Label(options, text="Map Scale:").grid(row=1, column=1, pady=5)
     scale_dd = ttk.Combobox(options)
+    scale_dd.grid(row=1, column=2, pady=5)
+    scale_dd['values'] = sorted(list(maps.keys()), key=multisort)
+
+    cells = {}
+    file_io.read_gnis("usgs_topos.csv", cells)
+
+    ttk.Label(options, text="Cell Name:").grid(row=3, column=1, pady=5)
+    cell_dd = ttk.Combobox(options)
+    cell_dd.grid(row=3, column=2, pady=5)
+
+    ttk.Label(options, text="Primary State:").grid(row=2, column=1, pady=5)
+    state_dd = ttk.Combobox(options)
+    state_dd.grid(row=2, column=2, pady=5)
+    state_dd['values'] = sorted(list(cells.keys()), key=multisort)
+    state_dd.bind('<<ComboboxSelected>>', lambda event, dd=state_dd: cell_dd.configure(values=sorted(list(cells[dd.get()].keys()), key=multisort)))
+
+def state_selected(cells, state_dd, quad_dd):
+    quad_dd['values'] = sorted(list(cells[state_dd.get()].keys()), key=multisort)
 
     # # entries for map year and print year
 
