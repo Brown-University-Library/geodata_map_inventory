@@ -20,14 +20,14 @@ Completed:
 - remove method checks for number of items selected and prints messages if it's anything other than 1
 - a confirmation window pops up to confirm removal before executing it
 - functionality for multiple matching records (pop-up window with links and radiobutton)
+- exception handling table is created, methods for reading GNIS's and generating unique IDs are complete, state/quad selections are bound
 
 To-do:
-- implement exception handling (new table, new window, loop through and make labeled entries, producer radiobutton with other option, carry GNIS over, potentially record other attributes that we don't record for USGS topos, do some pre-loading for exceptions ())
+- implement exception handling (finish creating the window elements, write the insert exception method, implement pre-loading
 - should the pre-loading carry over stuff that's locked in? probably not
 - should the pre-loading disable whatever is pre-loaded from being manipulated? maybe
 - AMS exceptions should record Series and the Sheet and the Edition
 - generate new id should maybe have a list of available IDs that can also be replenished upon removals
-- 222474 is an army map in the USGS system
 - label and comment code more
 
 columns in exceptions table:db everything in exception window (normal map stuff plus series sheet edition), id, recorded by, recorded time
