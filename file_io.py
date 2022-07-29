@@ -6,6 +6,17 @@
 import pandas as pd
 import csv
 
+def read_next_exception_id(filepath):
+    with open(filepath, 'r', newline='') as f:
+        reader = csv.reader(f)
+        for row in reader:
+            return row[0]
+
+def write_next_exception_id(filepath, next_exc_id):
+    with open(filepath, 'w', newline='') as f:
+        writer = csv.writer(f, delimiter='\n')
+        writer.writerow([next_exc_id])
+
 def read_users(filepath:str, users: list):
     """reads a csv file with a single column listing users, appends them to a list"""
     with open(filepath, 'r', newline='') as f:
@@ -19,6 +30,28 @@ def write_users(filepath:str, users):
     with open(filepath, 'w', newline='') as f:
         writer = csv.writer(f, delimiter='\n')
         writer.writerow(list(users))
+
+def read_gnis(filepath:str, cells:dict):
+    # these are the column names corresponding to the lookup parameters
+    columns = ['gnis_cell_id', 'cell_name', 'primary_state', 'cell_type', 'map_scale']
+    # read csv into df, selecting specified columns
+    topo_df = pd.read_csv(filepath, usecols=columns, dtype=str).drop_duplicates()
+    topo_df = topo_df[[x.startswith('Standard') for x in topo_df.cell_type]]
+    # topo_df['print_year'] = topo_df['print_year'].astype('Int64')
+    topos = topo_df.values.tolist()
+
+    for topo in topos:
+        # unpack values of list into variables
+        gnis, quad, state, cell_type, scale = topo
+
+        # initialize nested dictionary structure as needed
+        if state not in cells:
+            cells[state] = {}
+        if quad not in cells[state]:
+            cells[state][quad] = []
+        
+        # populate values for each row
+        cells[state][quad].append((scale, gnis))
 
 def read_topos(filepath:str, maps:dict):
     """
@@ -64,9 +97,12 @@ def read_topos(filepath:str, maps:dict):
 # and maybe even the SQLite database calls.
 
 if __name__ == '__main__':
-    # example of how to call read_topos()
+    # examples of how to call read_topos() and read_gnis()
     mymaps = {}
     read_topos('usgs_topos.csv', mymaps)
     print(mymaps['24000']['Oregon']['Sparta'])
     # print("{:2f}".format(1971))
+    mycells = {}
+    read_gnis('usgs_topos.csv', mycells)
+    print(mycells['Oregon']['Sparta'])
 

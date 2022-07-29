@@ -26,8 +26,19 @@ To-do:
 - should the pre-loading carry over stuff that's locked in? probably not
 - should the pre-loading disable whatever is pre-loaded from being manipulated? maybe
 - AMS exceptions should record Series and the Sheet and the Edition
+- generate new id should maybe have a list of available IDs that can also be replenished upon removals
 - 222474 is an army map in the USGS system
 - label and comment code more
+
+columns in exceptions table:db everything in exception window (normal map stuff plus series sheet edition), id, recorded by, recorded time
+on the exceptions window, the fab five will be text entry, but map scale, state, and cell name will also be drop-downs
+state and cell will be hooked up to each other, but not map scale.  this might require a new read-in method, with GNIS as the value
+map year and print year will just be text entry, restricted to 4-character numerical values
+I don't know if entry should be restricted to 1 menu at a time, or just open-season (will do latter for now)
+producer will be a radiobutton (maybe with an Other text entry, maybe not)
+we will still have checkboxes for duplicate and damage, and then a record this map
+sign-in methods will need to adjusted to get top ten from either of the tables, not just the one
+remove selected record will also need a way of navigating multiple tables depending on what is selected
 
 Important notes:
 - writing to the network db file does not work when someone has the db in writing

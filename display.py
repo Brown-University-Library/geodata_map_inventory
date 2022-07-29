@@ -119,23 +119,30 @@ def next_button(dd: LabeledDropDownMenu):
         dd.menu.current(val + 1) # set the drop down to the next value in the list of possible values
         dd_selected(dd)
 
-def record_exception():
-    """
-    Defines action that's taken when the Record exception button is pressed
-    """
-    pass
+def generate_new_id():
+    new_id = file_io.read_next_exception_id("next_exception_id.csv")
+    file_io.write_next_exception_id("next_exception_id.csv", int(new_id) + 1)
+    return new_id
 
-def remove_record(scan_id):
+def remove_record(removal_id):
     """deletes a given scan id from sqlite backend"""
-    map_db.remove(scan_id)
-    remaining = map_db.fetch(scan_id)
+    table = "usgs_topos_we_have"
+    if len(str(removal_id)) == 5:
+        table = "exception_maps_we_have"
+    before = map_db.fetch("usgs_topos_we_have", "scan_id", removal_id)
+    if len(before) == 0:
+        dialog['foreground'] = '#f00' # text will be red
+        dialogContents.set("Map " + str(removal_id) + " has already been removed.")
+        return None
+    map_db.remove("usgs_topos_we_have", "scan_id", removal_id)
+    remaining = map_db.fetch("usgs_topos_we_have", "scan_id", removal_id)
     if len(remaining) == 0:
         # call the method to display confirmation of removal window
         dialog['foreground'] = '#0f0' # text will be green
-        dialogContents.set("Map " + str(scan_id) + " successfully removed.")
+        dialogContents.set("Map " + str(removal_id) + " successfully removed.")
     else:
         dialog['foreground'] = '#f00' # text will be red
-        dialogContents.set("Possible error removing map " + str(scan_id) + " from the database.")
+        dialogContents.set("Possible error removing map " + str(removal_id) + " from the database.")
     pass
 
 def remove(removal_id, window):
@@ -150,6 +157,87 @@ def confirm_removal(removal_id):
     top.title("Confirm removal")
     Label(top, text = "Please confirm that you want to remove map " + removal_id + ".").place(relx=0.5, rely=0.3, anchor=CENTER)
     Button(top, text= "Yes, remove this record", foreground='#f00', command=lambda:remove(removal_id, top)).place(relx=0.5, rely=0.5, anchor=CENTER)
+
+def record_exception():
+    exc = Toplevel(root)
+    exc.wm_transient(root)
+    exc.title("Record an exception")
+    content = tk.Frame(exc)
+    content.grid(row=0, column=0, padx=10, pady=20)
+    title = ttk.Label(content, text="Fill in as much information as possible about the map in hand.")
+    title.grid(row=0, column=0, columnspan=5, rowspan=1, padx=100, pady=5)
+    options = tk.Frame(content)
+    options.grid(row=1, column=0, columnspan=COL_WIDTH, rowspan=8, pady=5)
+
+    # producer radiobutton
+    ttk.Label(content, text="Map producer:").grid(row=1, column=0, pady=5)
+    producer = StringVar()
+    producers = ['USGS', 'DMA', 'AMS', 'BLM']
+    for idx, prod in enumerate(producers):
+        ttk.Radiobutton(options, text=prod, variable=producer, value=prod).grid(row=idx+2, column=0, pady=5, sticky='e')
+
+    # # labeled drop down menus for scale, state, and cell name
+    ttk.Label(options, text="Map Scale:")
+    scale_dd = ttk.Combobox(options)
+
+    # # entries for map year and print year
+
+    # for idx, lbl in enumerate(label_names):
+    #     dropdowns[lbl] = LabeledDropDownMenu(ttk.Label(options, text=lbl + ": ")
+    #         , ttk.Combobox(options, state=DISABLED)
+    #         , ttk.Button(options, text="^", state=DISABLED)
+    #         , ttk.Button(options, text="v", state=DISABLED)
+    #         , idx
+    #         , {}
+    #     )
+    # # for example, dropdowns['Cell Name'].menu['state'] = 'readonly'
+
+    # # gridding the drop downs onto the frame
+    # for idx, dd in enumerate(dropdowns.values()):
+    #     r = (idx%3)*2 + 1  # creates three rows of drop downs, starting at row 1, with
+    #     c = int(idx/3)*3 # as many columns as are needed for the set of drop downs
+    #     dd.label.grid(row=r, column=c, rowspan=2, padx=20, pady=10, sticky='e')
+    #     dd.menu.grid(row=r, column=c+1, rowspan=2, padx=10)
+    #     dd.prev.grid(row=r, column=c+2, sticky='w')
+    #     dd.next.grid(row=r+1, column=c+2, sticky='w')
+
+    # # set up possible values for cell names by state
+    # maps = {}
+    # file_io.read_topos('usgs_topos.csv', maps)
+
+    # # initialize the first dropdown
+    # first_dd = list(dropdowns.values())[0] # access the first labeled dropdown menu
+    # first_dd.next_vals = maps
+    # first_dd.menu['values'] = sorted(list(maps.keys()), key=multisort) # or whatever corresponding dict's keys
+    # # first_dd['state'] = 'readonly'
+
+    # # bind each dropdown to dd_selected with itself as an argument, and each prev or
+    # # next button to the prev and next button methods with each dd as an argument.
+    # # The dd=dd statements are necessary - without them, the lambda would point to the 
+    # # variable dd at the end of the for loop rather than its value at each iteration.
+    # for dd in list(dropdowns.values()):
+    #     dd.menu.bind('<<ComboboxSelected>>', lambda event, dd=dd: dd_selected(dd))
+    #     dd.prev.configure(command = lambda dd=dd: prev_button(dd))
+    #     dd.next.configure(command = lambda dd=dd: next_button(dd))  
+
+    # dmgvar = BooleanVar(value=False)
+    # damaged = ttk.Checkbutton(options, text="This map is significantly damaged", 
+    #             variable=dmgvar, onvalue=True)
+    # damaged.grid(row=5, column=3, columnspan=3, rowspan=1)
+
+    # dupevar = BooleanVar(value=False)
+    # duplicate = ttk.Checkbutton(options, text="We have duplicate(s) for this map", 
+    #             variable=dupevar, onvalue=True)
+    # duplicate.grid(row=6, column=3, columnspan=3, rowspan=1)
+
+    # exception_btn = ttk.Button(options, text='Record an exception', command=record_exception)
+    # exception_btn.grid(row=7, column=0, columnspan=3, pady=5)
+
+    # remove_btn = ttk.Button(options, text='Remove selected record', command=remove_selected_record)
+    # remove_btn.grid(row=8, column=0, columnspan=3, pady=5)
+
+    # add1_btn = ttk.Button(options, text='Record this map', command=we_have_1, state=DISABLED)
+    # add1_btn.grid(row=7, column=3, rowspan=1, columnspan=3, pady=5)
     
 def remove_selected_record():
     """
@@ -210,17 +298,17 @@ def insert_record(scan_id):
     insertion by selecting that record from the db, and then calls methods to add
     that record to the table frame and print out a message, etc"""
     # maybe insert, then fetch for confirmation?
-    before = map_db.fetch(scan_id)
+    before = map_db.fetch("usgs_topos_we_have", "scan_id", scan_id)
     if len(before) > 0:
         dialog['foreground'] = '#f00' # text will be red
         dialogContents.set("Map " + str(scan_id) + " has already been recorded.")
         return None
-    map_db.insert(scan_id
+    map_db.insert_topo(scan_id
                 , initials.get() # recorded_by
                 , int(datetime.now().strftime('%Y%m%d%H%M')) # recorded_time
                 , int(dmgvar.get()) # is_damaged (0 or 1)
                 , int(dupevar.get())) # is_duplicate (0 or 1)
-    inserted = map_db.fetch(scan_id)
+    inserted = map_db.fetch("usgs_topos_we_have", "scan_id", scan_id)
     if len(inserted) == 1:
         add_to_table(scan_id) # display record on table, as well as confirmation
         dialog['foreground'] = '#0f0' # text will be green
@@ -234,7 +322,7 @@ def insert_record(scan_id):
 
 def add_to_table(scan_id):
     """insert info about a map we have into the display table"""
-    tbl_vals = [scan_id, 'USGS']
+    tbl_vals = [scan_id, 'USGS'] 
     tbl_vals.extend(grab_dd_values())
     # replace 'no' with dupe_var once created 
     tbl_vals.extend([dmgvar.get(), dupevar.get()])
@@ -277,7 +365,6 @@ COL_WIDTH = 7
 
 root = tk.Tk()
 root.title(tool_title)
-# root.geometry('1220x250') # to manually set the size - shouldn't be necessary
 
 # Frame containing the entire window - exists in order to customize margins
 content = tk.Frame(root)
@@ -373,7 +460,7 @@ dialog.grid(row=8, column=3, columnspan=3, rowspan=1, pady=5)
 # ---------------- table frame ---------------------------
 table = tk.Frame(content)
 table.grid(row=9, column=0, columnspan=7, rowspan=1, pady=5)
-tbl_cols = ('Scan ID', 'Producer', 'Map Scale', 'Primary State', 'Cell Name', 'Map Year', 'Print Year', 'Damaged', 'Duplicate')
+tbl_cols = ('Map ID', 'Producer', 'Map Scale', 'Primary State', 'Cell Name', 'Map Year', 'Print Year', 'Damaged', 'Duplicate')
 tbl = ttk.Treeview(table, columns=tbl_cols, show='headings')
 tbl.grid(row=9, column=0, columnspan=6, rowspan=1)
 # define headings

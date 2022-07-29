@@ -9,9 +9,9 @@ class Database:
         self.conn = sqlite3.connect(db)
         self.cur = self.conn.cursor()
 
-    def fetch(self, scan_id):
-        self.cur.execute(
-            "SELECT * FROM usgs_topos_we_have WHERE scan_id = " + str(scan_id))
+    def fetch(self, table, id_name, id_val):
+        query = "SELECT * FROM {} WHERE {} = ?".format(table, id_name)
+        self.cur.execute(query, (id_val,))
         rows = self.cur.fetchall()
         return rows
     
@@ -22,21 +22,13 @@ class Database:
         rows = self.cur.fetchall()
         return rows
 
-    # worth noting that execute() does have a two-argument mode where the first arg is a wild-carded SQL
-    # and the second arg is a tuple listing variables or values you want to sub in for those wild cards. Example:
-    # self.cur.execute("UPDATE routers SET hostname = ?, brand = ? WHERE id = ?", (hostname, brand, id))
-
-    def insert(self, scan_id, recorded_by, recorded_time, is_damaged, is_duplicate):
+    def insert_topo(self, scan_id, recorded_by, recorded_time, is_damaged, is_duplicate):
         self.cur.execute("INSERT INTO usgs_topos_we_have SELECT *, ?, ?, ?, ? FROM all_usgs_topos WHERE scan_id = ?", (recorded_by, recorded_time, is_damaged, is_duplicate, scan_id))
         self.conn.commit()
 
-    def remove(self, scan_id):
-        self.cur.execute("DELETE FROM usgs_topos_we_have WHERE scan_id = " + str(scan_id))
-        self.conn.commit()
-
-    def update(self, id, hostname, brand, ram, flash):
-        self.cur.execute("UPDATE routers SET hostname = ?, brand = ?, ram = ?, flash = ? WHERE id = ?",
-                         (hostname, brand, ram, flash, id))
+    def remove(self, table, id_name, id_val):
+        query = "DELETE FROM {} WHERE {} = ?".format(table, id_name)
+        self.cur.execute("DELETE FROM usgs_topos_we_have WHERE scan_id = ?", (id_val,))
         self.conn.commit()
 
     def __del__(self):
