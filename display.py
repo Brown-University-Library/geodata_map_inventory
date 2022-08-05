@@ -126,16 +126,16 @@ def generate_new_id():
 
 def remove_record(removal_id):
     """deletes a given scan id from sqlite backend"""
-    table = "usgs_topos_we_have"
-    if len(str(removal_id)) == 5:
-        table = "exception_maps_we_have"
-    before = map_db.fetch("usgs_topos_we_have", "scan_id", removal_id)
+    table, id_name = "usgs_topos_we_have", "scan_id"
+    if len(str(removal_id)) < 6:
+        table, id_name = "exception_maps_we_have", "map_id"
+    before = map_db.fetch(table, id_name, removal_id)
     if len(before) == 0:
         dialog['foreground'] = '#f00' # text will be red
         dialogContents.set("Map " + str(removal_id) + " has already been removed.")
         return None
-    map_db.remove("usgs_topos_we_have", "scan_id", removal_id)
-    remaining = map_db.fetch("usgs_topos_we_have", "scan_id", removal_id)
+    map_db.remove(table, id_name, removal_id)
+    remaining = map_db.fetch(table, id_name, removal_id)
     if len(remaining) == 0:
         # call the method to display confirmation of removal window
         dialog['foreground'] = '#0f0' # text will be green
@@ -159,7 +159,7 @@ def confirm_removal(removal_id):
     Label(top, text = "Please confirm that you want to remove map " + removal_id + ".").place(relx=0.5, rely=0.3, anchor=CENTER)
     Button(top, text= "Yes, remove this record", foreground='#f00', command=lambda:remove(removal_id, top)).place(relx=0.5, rely=0.5, anchor=CENTER)
 
-def record_exception():
+def record_exception(selected_vals):
     exc = Toplevel(root)
     exc.wm_transient(root)
     exc.grab_set() # makes it so user can't interact with the main window while exception window is open
@@ -172,7 +172,7 @@ def record_exception():
     options.grid(row=1, column=0, columnspan=COL_WIDTH, rowspan=8, pady=5)
 
     # producer radiobutton
-    ttk.Label(content, text="Map producer:").grid(row=1, column=1, padx=10)
+    ttk.Label(content, text="Map producer:").grid(row=1, column=0, padx=10)
     producer = StringVar()
     producers = ['USGS', 'Defense Mapping Agency', 'Army Map Service', 'Bureau of Land Management']
     for idx, prod in enumerate(producers):
@@ -199,12 +199,20 @@ def record_exception():
     state_dd.bind('<<ComboboxSelected>>', lambda event, sdd=state_dd, cdd=cell_dd: state_selected(cells, sdd, cdd))
 
     ttk.Label(options, text="Map Year:").grid(row=4, column=3, pady=5, sticky='e')
-    map_year_entry = ttk.Entry(options)
+    myr = tk.StringVar()
+    map_year_entry = tk.Entry(options, textvariable=myr)
     map_year_entry.grid(row=4, column=4, columnspan=2, pady=5, sticky='w')
 
     ttk.Label(options, text="Print Year:").grid(row=5, column=3, pady=5, sticky='e')
-    print_year_entry = ttk.Entry(options)
+    pyr = tk.StringVar()
+    print_year_entry = tk.Entry(options, textvariable=pyr)
     print_year_entry.grid(row=5, column=4, columnspan=2, pady=5, sticky='w')
+
+    for idx, option in enumerate([scale_dd, state_dd, cell_dd, myr, pyr]):
+        if selected_vals[idx] != '(none)':
+            option.set(selected_vals[idx])
+        if idx==1 and selected_vals[idx] != '':
+            state_selected(cells, state_dd, cell_dd)
 
     ttk.Label(options, text="Series:").grid(row=6, column=0, pady=5, sticky='e')
     series_entry = ttk.Entry(options)
@@ -363,8 +371,8 @@ def select_from_multiple(results):
     record_btn.grid(row=idx+2, column=0, columnspan=2, pady=20)
 
 def record_this_map(scan_id, window):
-    window.destroy()
     insert_record(scan_id)
+    window.destroy()
 
 def insert_record(scan_id):
     """inserts record for map we have on hand into sqlite backend, confirms the
@@ -520,7 +528,7 @@ duplicate = ttk.Checkbutton(options, text="We have duplicate(s) for this map",
             variable=dupevar, onvalue=True)
 duplicate.grid(row=6, column=3, columnspan=3, rowspan=1)
 
-exception_btn = ttk.Button(options, text='Record an exception', command=record_exception, state=DISABLED)
+exception_btn = ttk.Button(options, text='Record an exception', command=lambda: record_exception(grab_dd_values()), state=DISABLED)
 exception_btn.grid(row=7, column=0, columnspan=3, pady=5)
 
 remove_btn = ttk.Button(options, text='Remove selected record', command=remove_selected_record, state=DISABLED)

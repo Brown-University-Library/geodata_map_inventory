@@ -33,7 +33,7 @@ class Database:
 
     def remove(self, table, id_name, id_val):
         query = "DELETE FROM {} WHERE {} = ?".format(table, id_name)
-        self.cur.execute("DELETE FROM usgs_topos_we_have WHERE scan_id = ?", (id_val,))
+        self.cur.execute(query, (id_val,))
         self.conn.commit()
 
     def __del__(self):
