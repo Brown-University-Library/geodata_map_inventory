@@ -21,9 +21,14 @@ Completed:
 - a confirmation window pops up to confirm removal before executing it
 - functionality for multiple matching records (pop-up window with links and radiobutton)
 - exception handling table is created, methods for reading GNIS's and generating unique IDs are complete, state/quad selections are bound
+- exception handling window is created, insert exception method is complete, and sign-in method is updated to accommodate both tables
 
 To-do:
-- implement exception handling (finish creating the window elements, write the insert exception method, implement pre-loading
+- implement exception handling (implement pre-loading from main window)
+- verify that for duplicate gnis IDs its safe to just choose the Standard one - do we have over or undersized maps
+- should exception IDs be uniquely identifiable by map attributes?
+- fetch most recent doesn't consider producer
+- sorting the merged list doesn't seem to be working
 - should the pre-loading carry over stuff that's locked in? probably not
 - should the pre-loading disable whatever is pre-loaded from being manipulated? maybe
 - AMS exceptions should record Series and the Sheet and the Edition

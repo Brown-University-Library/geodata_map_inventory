@@ -153,6 +153,7 @@ def remove(removal_id, window):
 def confirm_removal(removal_id):
     top = Toplevel(root)
     top.wm_transient(root)
+    top.grab_set() # makes it so user can't interact with the main window while the confirm removal window is open
     top.geometry("400x250")
     top.title("Confirm removal")
     Label(top, text = "Please confirm that you want to remove map " + removal_id + ".").place(relx=0.5, rely=0.3, anchor=CENTER)
@@ -161,101 +162,155 @@ def confirm_removal(removal_id):
 def record_exception():
     exc = Toplevel(root)
     exc.wm_transient(root)
+    exc.grab_set() # makes it so user can't interact with the main window while exception window is open
     exc.title("Record an exception")
     content = tk.Frame(exc)
     content.grid(row=0, column=0, padx=10, pady=20)
     title = ttk.Label(content, text="Fill in as much information as possible about the map in hand.")
-    title.grid(row=0, column=0, columnspan=5, rowspan=1, padx=100, pady=5)
+    title.grid(row=0, column=0, columnspan=6, rowspan=1, padx=100, pady=5)
     options = tk.Frame(content)
     options.grid(row=1, column=0, columnspan=COL_WIDTH, rowspan=8, pady=5)
 
     # producer radiobutton
-    ttk.Label(content, text="Map producer:").grid(row=1, column=0, padx=10)
+    ttk.Label(content, text="Map producer:").grid(row=1, column=1, padx=10)
     producer = StringVar()
-    producers = ['USGS', 'DMA', 'AMS', 'BLM']
+    producers = ['USGS', 'Defense Mapping Agency', 'Army Map Service', 'Bureau of Land Management']
     for idx, prod in enumerate(producers):
-        ttk.Radiobutton(options, text=prod, variable=producer, value=prod).grid(row=idx+2, column=0, pady=5, padx=10)
+        ttk.Radiobutton(options, text=prod, variable=producer, value=prod).grid(row=idx+2, column=0, columnspan=3, pady=5, padx=10, sticky='w')
 
     # # labeled drop down menus for scale, state, and cell name
-    ttk.Label(options, text="Map Scale:").grid(row=1, column=1, pady=5)
+    ttk.Label(options, text="Map Scale:").grid(row=1, column=3, pady=5, sticky='e')
     scale_dd = ttk.Combobox(options)
-    scale_dd.grid(row=1, column=2, pady=5)
+    scale_dd.grid(row=1, column=4, columnspan=2, pady=5, sticky='w')
     scale_dd['values'] = sorted(list(maps.keys()), key=multisort)
 
+    # load in information about GNIS cell IDs for given states and cells
     cells = {}
     file_io.read_gnis("usgs_topos.csv", cells)
 
-    ttk.Label(options, text="Cell Name:").grid(row=3, column=1, pady=5)
-    cell_dd = ttk.Combobox(options)
-    cell_dd.grid(row=3, column=2, pady=5)
+    ttk.Label(options, text="Cell Name:").grid(row=3, column=3, pady=5, sticky='e')
+    cell_dd = ttk.Combobox(options) # , state=DISABLED
+    cell_dd.grid(row=3, column=4, columnspan=2, pady=5, sticky='w')
 
-    ttk.Label(options, text="Primary State:").grid(row=2, column=1, pady=5)
+    ttk.Label(options, text="Primary State:").grid(row=2, column=3, pady=5, sticky='e')
     state_dd = ttk.Combobox(options)
-    state_dd.grid(row=2, column=2, pady=5)
+    state_dd.grid(row=2, column=4, columnspan=2, pady=5, sticky='w')
     state_dd['values'] = sorted(list(cells.keys()), key=multisort)
-    state_dd.bind('<<ComboboxSelected>>', lambda event, dd=state_dd: cell_dd.configure(values=sorted(list(cells[dd.get()].keys()), key=multisort)))
+    state_dd.bind('<<ComboboxSelected>>', lambda event, sdd=state_dd, cdd=cell_dd: state_selected(cells, sdd, cdd))
 
-def state_selected(cells, state_dd, quad_dd):
-    quad_dd['values'] = sorted(list(cells[state_dd.get()].keys()), key=multisort)
+    ttk.Label(options, text="Map Year:").grid(row=4, column=3, pady=5, sticky='e')
+    map_year_entry = ttk.Entry(options)
+    map_year_entry.grid(row=4, column=4, columnspan=2, pady=5, sticky='w')
 
-    # # entries for map year and print year
+    ttk.Label(options, text="Print Year:").grid(row=5, column=3, pady=5, sticky='e')
+    print_year_entry = ttk.Entry(options)
+    print_year_entry.grid(row=5, column=4, columnspan=2, pady=5, sticky='w')
 
-    # for idx, lbl in enumerate(label_names):
-    #     dropdowns[lbl] = LabeledDropDownMenu(ttk.Label(options, text=lbl + ": ")
-    #         , ttk.Combobox(options, state=DISABLED)
-    #         , ttk.Button(options, text="^", state=DISABLED)
-    #         , ttk.Button(options, text="v", state=DISABLED)
-    #         , idx
-    #         , {}
-    #     )
-    # # for example, dropdowns['Cell Name'].menu['state'] = 'readonly'
+    ttk.Label(options, text="Series:").grid(row=6, column=0, pady=5, sticky='e')
+    series_entry = ttk.Entry(options)
+    series_entry.grid(row=6, column=1, pady=5, sticky='w')
 
-    # # gridding the drop downs onto the frame
-    # for idx, dd in enumerate(dropdowns.values()):
-    #     r = (idx%3)*2 + 1  # creates three rows of drop downs, starting at row 1, with
-    #     c = int(idx/3)*3 # as many columns as are needed for the set of drop downs
-    #     dd.label.grid(row=r, column=c, rowspan=2, padx=20, pady=10, sticky='e')
-    #     dd.menu.grid(row=r, column=c+1, rowspan=2, padx=10)
-    #     dd.prev.grid(row=r, column=c+2, sticky='w')
-    #     dd.next.grid(row=r+1, column=c+2, sticky='w')
+    ttk.Label(options, text="Sheet:").grid(row=6, column=2, pady=5, sticky='e')
+    sheet_entry = ttk.Entry(options)
+    sheet_entry.grid(row=6, column=3, pady=5, sticky='w')
 
-    # # set up possible values for cell names by state
-    # maps = {}
-    # file_io.read_topos('usgs_topos.csv', maps)
+    ttk.Label(options, text="Edition:").grid(row=6, column=4, pady=5, sticky='e')
+    edition_entry = ttk.Entry(options)
+    edition_entry.grid(row=6, column=5, pady=5, sticky='w')
 
-    # # initialize the first dropdown
-    # first_dd = list(dropdowns.values())[0] # access the first labeled dropdown menu
-    # first_dd.next_vals = maps
-    # first_dd.menu['values'] = sorted(list(maps.keys()), key=multisort) # or whatever corresponding dict's keys
-    # # first_dd['state'] = 'readonly'
+    dmgvar = BooleanVar(value=False)
+    damaged = Checkbutton(options, text="This map is significantly damaged", 
+                variable=dmgvar, onvalue=True)
+    damaged.grid(row=7, column=0, columnspan=3, rowspan=1, padx=5, pady=5)
+    damaged.deselect()
 
-    # # bind each dropdown to dd_selected with itself as an argument, and each prev or
-    # # next button to the prev and next button methods with each dd as an argument.
-    # # The dd=dd statements are necessary - without them, the lambda would point to the 
-    # # variable dd at the end of the for loop rather than its value at each iteration.
-    # for dd in list(dropdowns.values()):
-    #     dd.menu.bind('<<ComboboxSelected>>', lambda event, dd=dd: dd_selected(dd))
-    #     dd.prev.configure(command = lambda dd=dd: prev_button(dd))
-    #     dd.next.configure(command = lambda dd=dd: next_button(dd))  
+    dupevar = BooleanVar(value=False)
+    duplicate = Checkbutton(options, text="We have duplicate(s) for this map", 
+                variable=dupevar, onvalue=True)
+    duplicate.grid(row=7, column=3, columnspan=3, rowspan=1, padx=5, pady=5)
+    duplicate.deselect()
 
-    # dmgvar = BooleanVar(value=False)
-    # damaged = ttk.Checkbutton(options, text="This map is significantly damaged", 
-    #             variable=dmgvar, onvalue=True)
-    # damaged.grid(row=5, column=3, columnspan=3, rowspan=1)
+    map_vars = [producer, scale_dd, state_dd, cell_dd, map_year_entry, 
+        print_year_entry, series_entry, sheet_entry, edition_entry, dmgvar, dupevar]
 
-    # dupevar = BooleanVar(value=False)
-    # duplicate = ttk.Checkbutton(options, text="We have duplicate(s) for this map", 
-    #             variable=dupevar, onvalue=True)
-    # duplicate.grid(row=6, column=3, columnspan=3, rowspan=1)
+    record_exc_btn = ttk.Button(exc, text= "Record this map", command=lambda:insert_exc(map_vars, cells, exc))
+    record_exc_btn.grid(row=8, column=0, columnspan=3, pady=10)
 
-    # exception_btn = ttk.Button(options, text='Record an exception', command=record_exception)
-    # exception_btn.grid(row=7, column=0, columnspan=3, pady=5)
+def insert_exc(exc_map_vars, cells, window):
+    map_info = [x.get() for x in exc_map_vars]
+    print(map_info)
+    try:
+        scale = int(map_info[1])
+    except ValueError:
+        scale = 24000
+    state = map_info[2]
+    cell = map_info[3]
+    closest_gnis = ''
+    if state in cells:
+        if cell in cells[state]:
+            min_diff = float('inf') # initialize at positive infinity
+            for scl, gnis in cells[state][cell]:
+                if abs(int(scl) - scale) < min_diff:
+                    min_diff = abs(int(scl) - scale)
+                    closest_gnis = gnis
+    # "(map_id, producer, map_scale, primary_state, cell_name, gnis_cell_id, date_on_map, print_year, series, sheet, edition, is_damaged, is_duplicate, recorded_by, recorded_time)"
+    new_id = generate_new_id()
+    exc_tbl_row = [new_id]
+    exc_tbl_row.extend(map_info[:4])
+    exc_tbl_row.append(closest_gnis)
+    exc_tbl_row.extend(map_info[4:-2])
+    exc_tbl_row.extend([int(x) for x in map_info[-2:]])
+    exc_tbl_row.extend([initials.get(), int(datetime.now().strftime('%Y%m%d%H%M'))])
+    print(exc_tbl_row)
 
-    # remove_btn = ttk.Button(options, text='Remove selected record', command=remove_selected_record)
-    # remove_btn.grid(row=8, column=0, columnspan=3, pady=5)
+    # table display row
+    tbl_dsply_row = [new_id]
+    tbl_dsply_row.extend(map_info[:6])
+    tbl_dsply_row.extend(map_info[-2:])
+    print(tbl_dsply_row)
 
-    # add1_btn = ttk.Button(options, text='Record this map', command=we_have_1, state=DISABLED)
-    # add1_btn.grid(row=7, column=3, rowspan=1, columnspan=3, pady=5)
+    map_db.insert_exception(exc_tbl_row)
+    inserted = map_db.fetch("exception_maps_we_have", "map_id", new_id)
+    if len(inserted) == 1:
+        tbl.insert('', 0, values=tbl_dsply_row) # display record on table, as well as confirmation
+        dialog['foreground'] = '#0f0' # text will be green
+        dialogContents.set("Map " + str(new_id) + " successfully recorded!")
+        dmgvar.set(False)
+        dupevar.set(False)
+
+    window.destroy() # close the exception window
+
+def state_selected(cells, state_dd, cell_dd):
+    cell_dd['values'] = sorted(list(cells[state_dd.get()].keys()), key=multisort)
+    # cell_dd['state'] = 'readonly'
+    cell_dd.set('')
+
+def insert_exception(scan_id):
+    """inserts record for map we have on hand into sqlite backend, confirms the
+    insertion by selecting that record from the db, and then calls methods to add
+    that record to the table frame and print out a message, etc"""
+    # maybe insert, then fetch for confirmation?
+    before = map_db.fetch("usgs_topos_we_have", "scan_id", scan_id)
+    if len(before) > 0:
+        dialog['foreground'] = '#f00' # text will be red
+        dialogContents.set("Map " + str(scan_id) + " has already been recorded.")
+        return None
+    map_db.insert_topo(scan_id
+                , initials.get() # recorded_by
+                , int(datetime.now().strftime('%Y%m%d%H%M')) # recorded_time
+                , int(dmgvar.get()) # is_damaged (0 or 1)
+                , int(dupevar.get())) # is_duplicate (0 or 1)
+    inserted = map_db.fetch("usgs_topos_we_have", "scan_id", scan_id)
+    if len(inserted) == 1:
+        add_to_table(scan_id) # display record on table, as well as confirmation
+        dialog['foreground'] = '#0f0' # text will be green
+        dialogContents.set("Map " + str(scan_id) + " successfully recorded!")
+        dmgvar.set(False)
+        dupevar.set(False)
+
+    else:
+        dialog['foreground'] = '#f00' # text will be red
+        dialogContents.set("Possible error inserting map " + str(scan_id) + " into the database.")
     
 def remove_selected_record():
     """
@@ -325,7 +380,8 @@ def insert_record(scan_id):
                 , initials.get() # recorded_by
                 , int(datetime.now().strftime('%Y%m%d%H%M')) # recorded_time
                 , int(dmgvar.get()) # is_damaged (0 or 1)
-                , int(dupevar.get())) # is_duplicate (0 or 1)
+                , int(dupevar.get()) # is_duplicate (0 or 1)
+                , 'USGS') # producer
     inserted = map_db.fetch("usgs_topos_we_have", "scan_id", scan_id)
     if len(inserted) == 1:
         add_to_table(scan_id) # display record on table, as well as confirmation
@@ -345,7 +401,6 @@ def add_to_table(scan_id):
     # replace 'no' with dupe_var once created 
     tbl_vals.extend([dmgvar.get(), dupevar.get()])
     tbl.insert('', 0, values=tbl_vals)
-    # will need scan id, damaged y/n, and quantity as columns as well
     # ('Scan ID', 'Producer', 'Map Scale', 'Primary State', 'Cell Name', 'Map Year', 'Print Year', 'Damaged', 'Duplicate')
 
 def sign_in(event):
@@ -356,6 +411,8 @@ def sign_in(event):
         # and save the new set of possible values to users.csv
         file_io.write_users('users.csv', initials['values'])
     list(dropdowns.values())[0].enable() # enable the first drop-down menu
+    exception_btn['state'] = NORMAL
+    remove_btn['state'] = NORMAL
 
     # maybe print a confirmation message that you're signed in?
     dialog['foreground'] = '#0f0' # text will be green
@@ -370,12 +427,14 @@ def populate_most_recent(initials):
         tbl.delete(item)
     
     # grab the most recent maps recorded by the given initials, add them to table
-    rows = map_db.fetch_most_recent(initials)
-    for row in reversed(rows):
-        tbl_vals = [row[0], 'USGS']
-        tbl_vals.extend(["(none)" if val is None else val for val in row[1:-2]]) # convert empty values from database to (none) in table
-        tbl_vals.extend([bool(val) for val in row[-2:]]) # convert 1s and 0s from database to True and False for table
-        tbl.insert('', 0, values=tbl_vals)
+    rows = map_db.fetch_most_recent('usgs_topos_we_have', 'scan_id', initials)
+    exc_rows = map_db.fetch_most_recent('exception_maps_we_have', 'map_id', initials)
+    rows.extend(exc_rows)
+    most_recent = sorted(rows, key=lambda lst: int(lst[-1]))
+    for row in most_recent[:10]:
+        tbl_row = ["(none)" if val is None else val for val in row[:-3]] # convert empty values from database to (none) in table
+        tbl_row.extend([bool(val) for val in row[-3:-1]]) # convert 1s and 0s from is_damaged and is_duplicate columns to True and False for table
+        tbl.insert('', 0, values=tbl_row)
 
 COL_WIDTH = 7
 
@@ -461,19 +520,19 @@ duplicate = ttk.Checkbutton(options, text="We have duplicate(s) for this map",
             variable=dupevar, onvalue=True)
 duplicate.grid(row=6, column=3, columnspan=3, rowspan=1)
 
-exception_btn = ttk.Button(options, text='Record an exception', command=record_exception)
+exception_btn = ttk.Button(options, text='Record an exception', command=record_exception, state=DISABLED)
 exception_btn.grid(row=7, column=0, columnspan=3, pady=5)
 
-remove_btn = ttk.Button(options, text='Remove selected record', command=remove_selected_record)
+remove_btn = ttk.Button(options, text='Remove selected record', command=remove_selected_record, state=DISABLED)
 remove_btn.grid(row=8, column=0, columnspan=3, pady=5)
 
 add1_btn = ttk.Button(options, text='Record this map', command=we_have_1, state=DISABLED)
-add1_btn.grid(row=7, column=3, rowspan=1, columnspan=3, pady=5)
+add1_btn.grid(row=7, column=3, rowspan=2, columnspan=3, pady=5)
 
 dialogContents = StringVar()
 dialog = ttk.Label(options)
 dialog['textvariable'] = dialogContents
-dialog.grid(row=8, column=3, columnspan=3, rowspan=1, pady=5)
+dialog.grid(row=8, column=3, columnspan=3, rowspan=1, pady=5, sticky='s')
 
 # ---------------- table frame ---------------------------
 table = tk.Frame(content)
