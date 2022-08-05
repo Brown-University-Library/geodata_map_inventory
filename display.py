@@ -1,12 +1,11 @@
-# Ethan McIntosh - GIS and Data Services - Brown University - summer 2022
+# Ethan McIntosh - GIS and Data Services - Brown University - August 2022
 
 # This is where the GUI will actually run (where the user window is configured, 
 # and where calls to the backend are made in response to user selections)
 
-import tkinter as tk
+from lddm import *
 from tkinter import *
 from tkinter import ttk
-# from tkinter.messagebox import showinfo  # for messageboxes, if desired
 import file_io, db # other files in this package
 from collections import OrderedDict
 from datetime import datetime
@@ -15,43 +14,30 @@ import webbrowser
 tool_title = 'Brown University Map Collection Inventory Tool'
 map_db = db.Database('//files.brown.edu/DFS/Library_Shared/_geodata/maps/maps_we_have_test.db')
 
-class LabeledDropDownMenu:
-    """label is a tkinter label, menu is the corresponding tkinter combobox, 
-    index is the position of this drop-down menu in the hierarchy of menus (evaluate whether this is necessary),
-    from_dict is the dictionary whose keys are the possible items in the menu.
-    may also have prev and next tkinter buttons as part of this object"""
-    def __init__(self, label, menu, prev, next, index, next_vals):
-        self.label = label
-        self.menu = menu
-        self.index = index
-        self.prev = prev
-        self.next = next
-        self.next_vals = next_vals
+# -------------- METHODS -----------------
+def multisort(elem):
+    """This method is a sort key designed to be able to sort by number if elements
+    are numeric strings and sort alphabetically otherwise.  Normally, numeric
+    strings would be sorted like they're letters. This method also handles missing 
+    values that have been filled in as '(none)' in otherwise numeric-string 
+    columns, by treating them as zeroes."""
 
-    def disable(self):
-        self.menu['state'] = DISABLED
-        self.prev['state'] = tk.DISABLED
-        self.next['state'] = tk.DISABLED
+    if elem == '(none)':
+         return 0
+    elif is_number(elem):
+        return float(elem)
+    else: 
+        return elem
 
-    def enable(self):
-        self.menu['state'] = 'readonly'
-        self.prev['state'] = tk.NORMAL
-        self.next['state'] = tk.NORMAL
-
-
-# from_dict of the first menu is always the outer dict. every other from_dict is
-# based on the selection of the dict above it
-
-# -------------- methods under construction -----------------
 def is_number(s):
-    """This is part of my workaround for the fact that pandas casts integers in 
-    columns with missing values as floats."""
+    """Given a string s, returns true if the string is numeric and false otherwise."""
     try:
         float(s)
         return True
     except ValueError:
         return False
 
+# dropdowns
 def grab_dd_values():
     """traverses the drop-downs in order, returns a list of the selected values"""
     data = []
@@ -59,16 +45,7 @@ def grab_dd_values():
         data.append(dd.menu.get()) 
     return data
 
-def multisort(elem):
-    """sort by number if elem is numeric, sort alphabetically otherwise, and handle
-    missing values filled in as '(none)' """
-    if elem == '(none)':  # the value that was filled in for missing values in print year column
-         return 0
-    elif is_number(elem):
-        return float(elem)
-    else: 
-        return elem
-
+# dropdowns, label names, add1 button
 def dd_selected(cur_dd: LabeledDropDownMenu): 
     """given a selection in a given drop-down menu, control configuration of other drop-downs"""
     # disable the we have 1 button by default
@@ -87,7 +64,6 @@ def dd_selected(cur_dd: LabeledDropDownMenu):
     vals = sorted(list(next_dd.next_vals.keys()), key=multisort)
     next_dd.menu['values'] = vals
     
-
     # blank out & disable all drop-down menus after whichever one was selected
     # so that selections high in the hierarchy will clear out the following menus' values
     for dd in list(dropdowns.values())[next_dd.index:]: 
@@ -120,10 +96,14 @@ def next_button(dd: LabeledDropDownMenu):
         dd_selected(dd)
 
 def generate_new_id():
+    """reads next available ID number from a csv, writes a new number to that csv,
+    and returns the next available ID number.  Used for generating unique ID 
+    numbers for exception maps"""
     new_id = file_io.read_next_exception_id("next_exception_id.csv")
     file_io.write_next_exception_id("next_exception_id.csv", int(new_id) + 1)
     return new_id
 
+# dialog, dialogContents
 def remove_record(removal_id):
     """deletes a given scan id from sqlite backend"""
     table, id_name = "usgs_topos_we_have", "scan_id"
@@ -145,11 +125,13 @@ def remove_record(removal_id):
         dialogContents.set("Possible error removing map " + str(removal_id) + " from the database.")
     pass
 
+#tbl
 def remove(removal_id, window):
     remove_record(removal_id)
     tbl.delete(tbl.selection())
     window.destroy()
 
+# root
 def confirm_removal(removal_id):
     top = Toplevel(root)
     top.wm_transient(root)
@@ -159,6 +141,7 @@ def confirm_removal(removal_id):
     Label(top, text = "Please confirm that you want to remove map " + removal_id + ".").place(relx=0.5, rely=0.3, anchor=CENTER)
     Button(top, text= "Yes, remove this record", foreground='#f00', command=lambda:remove(removal_id, top)).place(relx=0.5, rely=0.5, anchor=CENTER)
 
+# root
 def record_exception(selected_vals):
     exc = Toplevel(root)
     exc.wm_transient(root)
@@ -244,6 +227,7 @@ def record_exception(selected_vals):
     record_exc_btn = ttk.Button(exc, text= "Record this map", command=lambda:insert_exc(map_vars, cells, exc))
     record_exc_btn.grid(row=8, column=0, columnspan=3, pady=10)
 
+# independent
 def insert_exc(exc_map_vars, cells, window):
     map_info = [x.get() for x in exc_map_vars]
     print(map_info)
@@ -288,11 +272,12 @@ def insert_exc(exc_map_vars, cells, window):
 
     window.destroy() # close the exception window
 
+# independent
 def state_selected(cells, state_dd, cell_dd):
     cell_dd['values'] = sorted(list(cells[state_dd.get()].keys()), key=multisort)
-    # cell_dd['state'] = 'readonly'
     cell_dd.set('')
 
+# map_db / dialog / dialogContents / dmg / dupe
 def insert_exception(scan_id):
     """inserts record for map we have on hand into sqlite backend, confirms the
     insertion by selecting that record from the db, and then calls methods to add
@@ -319,7 +304,8 @@ def insert_exception(scan_id):
     else:
         dialog['foreground'] = '#f00' # text will be red
         dialogContents.set("Possible error inserting map " + str(scan_id) + " into the database.")
-    
+
+# dialog / dialogContents 
 def remove_selected_record():
     """
     Defines action that's taken when the Remove selected record button is pressed
@@ -334,6 +320,7 @@ def remove_selected_record():
         dialog['foreground'] = '#f00' # text will be red
         dialogContents.set("Cannot remove more than one record at a time.")
 
+# dropdowns
 def we_have_1():
     """
     Defines action that's taken when the We have 1 button is pressed
@@ -352,6 +339,7 @@ def we_have_1():
     else:
         select_from_multiple(results)
 
+# independent
 def select_from_multiple(results):
     """create the pop-up window where the user chooses which map record matches
     the map physically in hand by opening up the links to the different options"""
@@ -370,10 +358,12 @@ def select_from_multiple(results):
     
     record_btn.grid(row=idx+2, column=0, columnspan=2, pady=20)
 
+# independent
 def record_this_map(scan_id, window):
     insert_record(scan_id)
     window.destroy()
 
+# map_db / dialog / dialogContents / dmg / dupe
 def insert_record(scan_id):
     """inserts record for map we have on hand into sqlite backend, confirms the
     insertion by selecting that record from the db, and then calls methods to add
@@ -402,6 +392,7 @@ def insert_record(scan_id):
         dialog['foreground'] = '#f00' # text will be red
         dialogContents.set("Possible error inserting map " + str(scan_id) + " into the database.")
 
+# tbl
 def add_to_table(scan_id):
     """insert info about a map we have into the display table"""
     tbl_vals = [scan_id, 'USGS'] 
@@ -411,24 +402,29 @@ def add_to_table(scan_id):
     tbl.insert('', 0, values=tbl_vals)
     # ('Scan ID', 'Producer', 'Map Scale', 'Primary State', 'Cell Name', 'Map Year', 'Print Year', 'Damaged', 'Duplicate')
 
+# dropdowns, exc button, rmv button / dialog / dialogContents / initials
 def sign_in(event):
     """selection is made on the initials drop down"""
-    if initials.get() not in initials['values']: # if someone types in a new username
-        # add their entry to the drop-down of possible values
-        initials['values'] = (*initials['values'], initials.get())
-        # and save the new set of possible values to users.csv
-        file_io.write_users('users.csv', initials['values'])
+
+    # # This if-block supports users typing in their own initials, by updating the csv file of users with the new initials
+    # if initials.get() not in initials['values']: # if someone types in a new username
+    #     # add their entry to the drop-down of possible values
+    #     initials['values'] = (*initials['values'], initials.get())
+    #     # and save the new set of possible values to users.csv
+    #     file_io.write_users('users.csv', initials['values'])
+
     list(dropdowns.values())[0].enable() # enable the first drop-down menu
     exception_btn['state'] = NORMAL
     remove_btn['state'] = NORMAL
 
-    # maybe print a confirmation message that you're signed in?
+    # print a confirmation for sign-in
     dialog['foreground'] = '#0f0' # text will be green
     dialogContents.set("Welcome, " + initials.get() + "!")
 
     # also, call the method to update table with that person's stuff
     populate_most_recent(initials.get())
 
+# tbl / map_db
 def populate_most_recent(initials):
     # clear whatever's currently in the table
     for item in tbl.get_children():
@@ -439,8 +435,8 @@ def populate_most_recent(initials):
     exc_rows = map_db.fetch_most_recent('exception_maps_we_have', 'map_id', initials)
     rows.extend(exc_rows)
     most_recent = sorted(rows, key=lambda lst: int(lst[-1]))
-    for row in most_recent[:10]:
-        tbl_row = ["(none)" if val is None else val for val in row[:-3]] # convert empty values from database to (none) in table
+    for row in most_recent[-10:]:
+        tbl_row = ["(none)" if val is None or val == '' else val for val in row[:-3]] # convert empty values from database to (none) in table
         tbl_row.extend([bool(val) for val in row[-3:-1]]) # convert 1s and 0s from is_damaged and is_duplicate columns to True and False for table
         tbl.insert('', 0, values=tbl_row)
 
@@ -455,31 +451,22 @@ root.title(tool_title)
 content = tk.Frame(root)
 content.grid(row=0, column=0, padx=10, pady=20)
 
-# in the future, column and row spans should not be manually defined
-
-# ---------------------- header frame ----------------------------
+# add a header frame with a title and a drop-down menu for users to sign in
 header = tk.Frame(content)
-header.grid(row=0, column=0, columnspan=COL_WIDTH, rowspan=1, pady=5)
 title = ttk.Label(header, text=tool_title)
-title.grid(row=0, column=0, columnspan=5, rowspan=1, padx=100, pady=5)
-
 sign_in_label = ttk.Label(header, text="Select your initials to sign in:")
-sign_in_label.grid(row=0, column=5)
-
-users = []
-file_io.read_users('users.csv', users)
-initials = ttk.Combobox(header, state='readonly')
-initials['values'] = users
+initials = ttk.Combobox(header, state='readonly', values=file_io.read_users('users.csv'))
 initials.bind('<<ComboboxSelected>>', sign_in)
-initials.bind('<Return>', sign_in)
-initials.grid(row=0, column=6, padx=20)
 
-# -------------------- options frame ----------------------
+# add an options frame to contain all the menus and buttons for recording maps
 options = tk.Frame(content)
-options.grid(row=1, column=0, columnspan=COL_WIDTH, rowspan=8, pady=5)
+
+# set up a series of labeled drop down menus for a list of attributes, and put 
+# those LDDMs into an ordered dictionary structure so that they can be looked up
+# by name but also be stored in a specific order
+label_names = ['Map Scale', 'Primary State', 'Cell Name', 'Map Year', 'Print Year'] 
 dropdowns = OrderedDict()
 
-label_names = ['Map Scale', 'Primary State', 'Cell Name', 'Map Year', 'Print Year']
 for idx, lbl in enumerate(label_names):
     dropdowns[lbl] = LabeledDropDownMenu(ttk.Label(options, text=lbl + ": ")
         , ttk.Combobox(options, state=DISABLED)
@@ -488,18 +475,9 @@ for idx, lbl in enumerate(label_names):
         , idx
         , {}
     )
-# for example, dropdowns['Cell Name'].menu['state'] = 'readonly'
+# for example, dropdowns['Cell Name'].menu['state'] = 'readonly' would activate the Cell Name drop down menu.
 
-# gridding the drop downs onto the frame
-for idx, dd in enumerate(dropdowns.values()):
-    r = (idx%3)*2 + 1  # creates three rows of drop downs, starting at row 1, with
-    c = int(idx/3)*3 # as many columns as are needed for the set of drop downs
-    dd.label.grid(row=r, column=c, rowspan=2, padx=20, pady=10, sticky='e')
-    dd.menu.grid(row=r, column=c+1, rowspan=2, padx=10)
-    dd.prev.grid(row=r, column=c+2, sticky='w')
-    dd.next.grid(row=r+1, column=c+2, sticky='w')
-
-# set up possible values for drop-downs
+# read map data into a nested dictionary
 maps = {}
 file_io.read_topos('usgs_topos.csv', maps)
 
@@ -521,21 +499,16 @@ for dd in list(dropdowns.values()):
 dmgvar = BooleanVar(value=False)
 damaged = ttk.Checkbutton(options, text="This map is significantly damaged", 
             variable=dmgvar, onvalue=True)
-damaged.grid(row=5, column=3, columnspan=3, rowspan=1)
 
 dupevar = BooleanVar(value=False)
 duplicate = ttk.Checkbutton(options, text="We have duplicate(s) for this map", 
             variable=dupevar, onvalue=True)
-duplicate.grid(row=6, column=3, columnspan=3, rowspan=1)
 
 exception_btn = ttk.Button(options, text='Record an exception', command=lambda: record_exception(grab_dd_values()), state=DISABLED)
-exception_btn.grid(row=7, column=0, columnspan=3, pady=5)
 
 remove_btn = ttk.Button(options, text='Remove selected record', command=remove_selected_record, state=DISABLED)
-remove_btn.grid(row=8, column=0, columnspan=3, pady=5)
 
 add1_btn = ttk.Button(options, text='Record this map', command=we_have_1, state=DISABLED)
-add1_btn.grid(row=7, column=3, rowspan=2, columnspan=3, pady=5)
 
 dialogContents = StringVar()
 dialog = ttk.Label(options)
@@ -544,10 +517,10 @@ dialog.grid(row=8, column=3, columnspan=3, rowspan=1, pady=5, sticky='s')
 
 # ---------------- table frame ---------------------------
 table = tk.Frame(content)
-table.grid(row=9, column=0, columnspan=7, rowspan=1, pady=5)
+
 tbl_cols = ('Map ID', 'Producer', 'Map Scale', 'Primary State', 'Cell Name', 'Map Year', 'Print Year', 'Damaged', 'Duplicate')
 tbl = ttk.Treeview(table, columns=tbl_cols, show='headings')
-tbl.grid(row=9, column=0, columnspan=6, rowspan=1)
+
 # define headings
 for col in tbl_cols:
     tbl.heading(col, text=col)
@@ -555,10 +528,43 @@ for col in tbl_cols:
 # add a scrollbar
 tbl_scroll = ttk.Scrollbar(table, orient=tk.VERTICAL, command=tbl.yview)
 tbl.configure(yscroll=tbl_scroll.set)
-tbl_scroll.grid(row=9, column=6, rowspan=1, sticky='ns') # one column to the right of tbl
 
-# run the app
+# -------------------- place widgets onto the main window -------------------
+
+# ---- header frame ----
+header.grid(row=0, column=0, columnspan=COL_WIDTH, rowspan=1, pady=5)
+title.grid(row=0, column=0, columnspan=5, rowspan=1, padx=100, pady=5)
+sign_in_label.grid(row=0, column=5)
+initials.grid(row=0, column=6, padx=20)
+
+# ---- options frame ----
+options.grid(row=1, column=0, columnspan=COL_WIDTH, rowspan=8, pady=5)
+
+for idx, dd in enumerate(dropdowns.values()):
+    r = (idx%3)*2 + 1  # creates three rows of drop downs, starting at row 1, with
+    c = int(idx/3)*3   # as many columns as are needed for the set of drop downs
+
+    # place each label on the left, then the menu, then the prev/next buttons
+    dd.label.grid(row=r, column=c, rowspan=2, padx=20, pady=10, sticky='e')
+    dd.menu.grid(row=r, column=c+1, rowspan=2, padx=10)
+    dd.prev.grid(row=r, column=c+2, sticky='w')
+    dd.next.grid(row=r+1, column=c+2, sticky='w')
+
+damaged.grid(row=5, column=3, columnspan=3, rowspan=1) # dmg checkbox
+duplicate.grid(row=6, column=3, columnspan=3, rowspan=1) # duplicate checkbox
+exception_btn.grid(row=7, column=0, columnspan=3, pady=5) # record exception button
+remove_btn.grid(row=8, column=0, columnspan=3, pady=5) # remove selected button
+add1_btn.grid(row=7, column=3, rowspan=2, columnspan=3, pady=5) # record this map button
+dialog.grid(row=8, column=3, columnspan=3, rowspan=1, pady=5) # dialog label
+
+# ---- table frame ----
+table.grid(row=9, column=0, columnspan=7, rowspan=1, pady=5)
+tbl.grid(row=9, column=0, columnspan=6, rowspan=1) # table 
+tbl_scroll.grid(row=9, column=6, rowspan=1, sticky='ns') # table scroll bar
+
+# ------------------------------ run the app -------------------------------
 root.mainloop()
+
 
 
 # --------- code for rendering images from URL into tkinter window, if desired ----------------

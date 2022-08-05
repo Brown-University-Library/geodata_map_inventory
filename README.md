@@ -31,7 +31,7 @@ To-do:
 - should the pre-loading carry over stuff that's locked in? it currently does
 - should the pre-loading disable whatever is pre-loaded from being manipulated?
 - generate new id should maybe have a list of available IDs that can also be replenished upon removals
-- label and comment code more
+- comment and reorganize code (next: read_topos should take columns as an ordered input parameter)
 
 columns in exceptions table:db everything in exception window (normal map stuff plus series sheet edition), id, recorded by, recorded time
 on the exceptions window, the fab five will be text entry, but map scale, state, and cell name will also be drop-downs
