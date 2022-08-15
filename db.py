@@ -41,7 +41,7 @@ class Database:
     def insert_exception(self, exception_vals):
         """Given a ordered set of 15 values for a given exception map, inserts those values into the exception_maps_we_have table"""
         cols = "(map_id, producer, map_scale, primary_state, cell_name, gnis_cell_id, "+\
-            "date_on_map, print_year, series, sheet, edition, is_damaged, is_duplicate, recorded_by, recorded_time)"
+            "date_on_map, print_year, sheet, series, edition, is_damaged, is_duplicate, recorded_by, recorded_time)"
         self.cur.execute("INSERT INTO exception_maps_we_have " + cols + " VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                         , exception_vals)
         self.conn.commit()

@@ -11,7 +11,7 @@ from collections import OrderedDict
 from datetime import datetime
 import webbrowser
 
-tool_title = 'Brown University Map Collection Inventory Tool'
+tool_title = 'BUL Topo Map Inventory Tool'
 map_db = db.Database('//files.brown.edu/DFS/Library_Shared/_geodata/maps/maps_we_have_test.db')
 
 # -------------- METHODS -----------------
@@ -157,7 +157,7 @@ def record_exception(selected_vals):
     # producer radiobutton
     ttk.Label(content, text="Map producer:").grid(row=1, column=0, padx=10)
     producer = StringVar()
-    producers = ['USGS', 'Defense Mapping Agency', 'Army Map Service', 'Bureau of Land Management']
+    producers = ['Army Map Service', 'Bureau of Land Management', 'Defense Mapping Agency', 'USGS']
     for idx, prod in enumerate(producers):
         ttk.Radiobutton(options, text=prod, variable=producer, value=prod).grid(row=idx+2, column=0, columnspan=3, pady=5, padx=10, sticky='w')
 
@@ -197,13 +197,13 @@ def record_exception(selected_vals):
         if idx==1 and selected_vals[idx] != '':
             state_selected(cells, state_dd, cell_dd)
 
+        ttk.Label(options, text="Sheet:").grid(row=6, column=2, pady=5, sticky='e')
+    sheet_entry = ttk.Entry(options)
+    sheet_entry.grid(row=6, column=1, pady=5, sticky='w')
+
     ttk.Label(options, text="Series:").grid(row=6, column=0, pady=5, sticky='e')
     series_entry = ttk.Entry(options)
-    series_entry.grid(row=6, column=1, pady=5, sticky='w')
-
-    ttk.Label(options, text="Sheet:").grid(row=6, column=2, pady=5, sticky='e')
-    sheet_entry = ttk.Entry(options)
-    sheet_entry.grid(row=6, column=3, pady=5, sticky='w')
+    series_entry.grid(row=6, column=3, pady=5, sticky='w')
 
     ttk.Label(options, text="Edition:").grid(row=6, column=4, pady=5, sticky='e')
     edition_entry = ttk.Entry(options)
@@ -222,7 +222,7 @@ def record_exception(selected_vals):
     duplicate.deselect()
 
     map_vars = [producer, scale_dd, state_dd, cell_dd, map_year_entry, 
-        print_year_entry, series_entry, sheet_entry, edition_entry, dmgvar, dupevar]
+        print_year_entry, sheet_entry, series_entry, edition_entry, dmgvar, dupevar]
 
     record_exc_btn = ttk.Button(exc, text= "Record this map", command=lambda:insert_exc(map_vars, cells, exc))
     record_exc_btn.grid(row=8, column=0, columnspan=3, pady=10)
@@ -245,7 +245,7 @@ def insert_exc(exc_map_vars, cells, window):
                 if abs(int(scl) - scale) < min_diff:
                     min_diff = abs(int(scl) - scale)
                     closest_gnis = gnis
-    # "(map_id, producer, map_scale, primary_state, cell_name, gnis_cell_id, date_on_map, print_year, series, sheet, edition, is_damaged, is_duplicate, recorded_by, recorded_time)"
+    # "(map_id, producer, map_scale, primary_state, cell_name, gnis_cell_id, date_on_map, print_year, sheet, series, edition, is_damaged, is_duplicate, recorded_by, recorded_time)"
     new_id = generate_new_id()
     exc_tbl_row = [new_id]
     exc_tbl_row.extend(map_info[:4])
