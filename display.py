@@ -172,7 +172,7 @@ def record_exception(selected_vals):
     file_io.read_gnis("usgs_topos.csv", cells)
 
     ttk.Label(options, text="Cell Name:").grid(row=3, column=3, pady=5, sticky='e')
-    cell_dd = ttk.Combobox(options) # , state=DISABLED
+    cell_dd = ttk.Combobox(options, state=NORMAL) # , state=DISABLED
     cell_dd.grid(row=3, column=4, columnspan=2, pady=5, sticky='w')
 
     ttk.Label(options, text="Primary State:").grid(row=2, column=3, pady=5, sticky='e')
