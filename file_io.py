@@ -32,7 +32,6 @@ def read_users(filepath:str):
     """reads a csv file with a single column listing map inventory application 
     users and returns the values as a list
     
-    users: the list object to append users to. Usually you'd pass in an empty list
     filepath: a csv file storing a list of possible users in its first column"""
     users = []
     with open(filepath, 'r', newline='') as f:
@@ -40,17 +39,6 @@ def read_users(filepath:str):
         for row in reader:
             users.append(row[0])
     return users
-
-# # this method was relevant when users could type in their own initials
-# def write_users(filepath:str, users):
-#     """Given a list of users, writes each user into its own row in the first
-#     column of a given csv file, overwriting whatever is in those cells
-    
-#     users: the list of users
-#     filepath: a csv file storing a list of possible users in its first column"""
-#     with open(filepath, 'w', newline='') as f:
-#         writer = csv.writer(f, delimiter='\n')
-#         writer.writerow(list(users))
 
 def read_gnis(filepath:str, cells:dict):
     """Reads tabular-format data on topographic maps from the csv table of all USGS
@@ -135,16 +123,3 @@ def read_topos(filepath:str, maps:dict):
         
         # populate values for each row
         maps[scale][state][quad][map_year][print_year].append((id, url))
-
-if __name__ == '__main__':
-    # example of how to call read_topos()
-    mymaps = {}
-    read_topos('usgs_topos.csv', mymaps)
-    print("read_topos() example:")
-    print(mymaps['24000']['Oregon']['Sparta'])
-
-    # example of how to call read_gnis()
-    mycells = {}
-    read_gnis('usgs_topos.csv', mycells)
-    print("read_gnis() example:")
-    print(mycells['Oregon']['Sparta'])

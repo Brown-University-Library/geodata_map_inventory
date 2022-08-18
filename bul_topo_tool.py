@@ -1,5 +1,5 @@
 # Ethan McIntosh - GIS and Data Services - Brown University - August 2022
-
+# -----------------------------------------------------------------------------
 # This is where the GUI will actually run (where the user window is configured, 
 # and where calls to the backend are made in response to user selections)
 
@@ -14,80 +14,206 @@ import webbrowser
 tool_title = 'BUL Topo Map Inventory Tool'
 map_db = db.Database('//files.brown.edu/DFS/Library_Shared/_geodata/maps/maps_we_have_test.db')
 
-# ------------------- AUTOCOMPLETE COMBOBOX CLASS -------------------------
-"""
-The code below for this AutocompleteCombobox class was created by the following
-authors. I modified their code only slightly to make it interact with menu selection functions.
+# ------------------------------------------------------------------------------
+# ---------------------------- CUSTON CLASSES ----------------------------------
+# ------------------------------------------------------------------------------
 
-Created by Mitja Martini on 2008-11-29.
-Updated by Russell Adams, 2011/01/24 to support Python 3 and Combobox.
-Licensed same as original (not specified?), or public domain, whichever is less restrictive.
-
-Source: https://mail.python.org/pipermail/tkinter-discuss/2012-January/003041.html
-"""
 class AutocompleteCombobox(ttk.Combobox):
-        def set_completion_list(self, completion_list, select_func=None, disable_next=None):
-                """Use our completion list as our drop down selection menu, arrows move through menu.
-                Optional select_func argument allows you to specify function that should be called when an autocomplete is performed"""
-                self._completion_list = completion_list
-                self._hits = []
-                self._hit_index = 0
-                self.position = 0
-                self.bind('<KeyRelease>', self.handle_keyrelease)
-                self['values'] = self._completion_list  # Setup our popup menu
-                self.select_func = select_func
-                self.disable_next = disable_next
+    """
+    The code for this class is an extension of the tkinter combobox (drop-down menu) 
+    which autocompletes typed-in entries based on the predefined values of the menu. 
+    I modified the original authors' code slightly in order to have autocompletion 
+    trigger other functions under certain conditions. The doc-string comments for 
+    each method are mine, but the in-line comments are by the original authors.
 
-        def autocomplete(self, delta=0):
-                """autocomplete the Combobox, delta may be 0/1/-1 to cycle through possible hits"""
-                if delta: # need to delete selection otherwise we would fix the current position
-                        self.delete(self.position, tk.END)
-                else: # set position to end so selection starts where textentry ended
-                        self.position = len(self.get())
-                # collect hits
-                _hits = []
-                for element in self._completion_list:
-                        if element.lower().startswith(self.get().lower()): # Match case insensitively
-                                _hits.append(element)
-                # if we have a new hit list, keep this in mind
-                if _hits != self._hits:
-                        self._hit_index = 0
-                        self._hits=_hits
-                # only allow cycling if we are in a known hit list
-                if _hits == self._hits and self._hits:
-                        self._hit_index = (self._hit_index + delta) % len(self._hits)
-                # now finally perform the auto completion
-                if self._hits:
-                        self.delete(0,tk.END)
-                        self.insert(0,self._hits[self._hit_index])
-                        self.select_range(self.position,tk.END)
+    Original author information:
+        Created by Mitja Martini on 2008-11-29.
+        Updated by Russell Adams, 2011/01/24 to support Python 3 and Combobox.
+        Licensed same as original (not specified?), or public domain, whichever is less restrictive.
+
+    Source: https://mail.python.org/pipermail/tkinter-discuss/2012-January/003041.html
+    """
+    def set_completion_list(self, completion_list, select_func=None, no_match_func=None):
+            """This initializes the drop-down menu with some extra data structures that
+            are needed for the autocomplete to be functional. The optional select_func 
+            and no_match_func arguments allow you to specify functions that should be
+            called when an autocomplete is performed (select_func) or when a typed entry
+            does not match the predefined list of options (no_match_func)"""
+            self._completion_list = completion_list
+            self._hits = []
+            self._hit_index = 0
+            self.position = 0
+            self.bind('<KeyRelease>', self.handle_keyrelease)
+            self['values'] = self._completion_list  # Setup our popup menu
+            self.select_func = select_func
+            self.no_match_func = no_match_func
+
+    def autocomplete(self, delta=0):
+            """This method is called in response to keystrokes in order to autocomplete the Combobox.
+            If an autocomplete is performed, call the given select_func().
+            If the value in the menu doesn't match a predefined option, call the given no_match_func()."""
+            if delta: # need to delete selection otherwise we would fix the current position
+                    self.delete(self.position, tk.END)
+            else: # set position to end so selection starts where textentry ended
+                    self.position = len(self.get())
+            # collect hits
+            _hits = []
+            for element in self._completion_list:
+                    if element.lower().startswith(self.get().lower()): # Match case insensitively
+                            _hits.append(element)
+            # if we have a new hit list, keep this in mind
+            if _hits != self._hits:
+                    self._hit_index = 0
+                    self._hits=_hits
+            # only allow cycling if we are in a known hit list
+            if _hits == self._hits and self._hits:
+                    self._hit_index = (self._hit_index + delta) % len(self._hits)
+            # now finally perform the auto completion
+            if self._hits:
+                    self.delete(0,tk.END)
+                    self.insert(0,self._hits[self._hit_index])
+                    self.select_range(self.position,tk.END)
+                    self.select_func()
+            else: # if whatever is typed into the box does not match a predefined option
+                self.no_match_func()
+
+    def handle_keyrelease(self, event):
+            """event handler for the keyrelease event while this widget is active
+            If the value in the menu doesn't match a predefined option, call the given no_match_func()
+            If it does match a predefined option, call the given select_func()"""
+            if event.keysym == "BackSpace":
+                    self.delete(self.index(tk.INSERT), tk.END)
+                    self.position = self.index(tk.END)
+                    if self.get() not in self._completion_list:
+                        self.no_match_func()
+                    else:
                         self.select_func()
-                else: # if whatever is typed into the box does not match a pre-set option
-                    self.disable_next()
+            if event.keysym == "Left":
+                    if self.position < self.index(tk.END): # delete the selection
+                            self.delete(self.position, tk.END)
+                    else:
+                            self.position = self.position-1 # delete one character
+                            self.delete(self.position, tk.END)
+            if event.keysym == "Right":
+                    self.position = self.index(tk.END) # go to end (no selection)
+            if len(event.keysym) == 1:
+                    self.autocomplete()
+            # No need for up/down, we'll jump to the popup
+            # list at the position of the autocompletion
 
-        def handle_keyrelease(self, event):
-                """event handler for the keyrelease event on this widget"""
-                if event.keysym == "BackSpace":
-                        self.delete(self.index(tk.INSERT), tk.END)
-                        self.position = self.index(tk.END)
-                        if self.get() not in self._completion_list:
-                            self.disable_next()
-                        else:
-                            self.select_func()
-                if event.keysym == "Left":
-                        if self.position < self.index(tk.END): # delete the selection
-                                self.delete(self.position, tk.END)
-                        else:
-                                self.position = self.position-1 # delete one character
-                                self.delete(self.position, tk.END)
-                if event.keysym == "Right":
-                        self.position = self.index(tk.END) # go to end (no selection)
-                if len(event.keysym) == 1:
-                        self.autocomplete()
-                # No need for up/down, we'll jump to the popup
-                # list at the position of the autocompletion
+class LabeledDropDownMenu:
+    """This class basically just bundles together several tkinter widgets and some 
+    associated data into a single object. This bundling makes it easier to have a 
+    series of drop-down menus that are linked to each other hierarchically.
 
-# -------------- METHODS -----------------
+    label is a tk label, menu is a tk combobox (a drop-down menu), 
+    index is the position of this drop-down menu in the hierarchy of LDDMs,
+    from_dict is the dictionary whose keys are the possible items in the menu,
+    prev and next are tk buttons that select the previous or next values from the menu,
+    and next_vals is a dictionary whose keys are the possible values of the menu."""
+    def __init__(self, label: Label, menu: AutocompleteCombobox, prev: Button, 
+                next: Button, index: int, next_vals: dict):
+        self.label = label
+        self.menu = menu
+        self.index = index
+        self.prev = prev
+        self.next = next
+        self.next_vals = next_vals
+
+    def disable(self):
+        """disables the drop-down menu and its associated prev/next buttons"""
+        self.menu['state'] = tk.DISABLED
+        self.prev['state'] = tk.DISABLED
+        self.next['state'] = tk.DISABLED
+
+    def enable(self):
+        """enables the drop-down menu and its associated prev/next buttons"""
+        self.menu['state'] = tk.NORMAL
+        self.prev['state'] = tk.NORMAL
+        self.next['state'] = tk.NORMAL
+
+# ------------------------------------------------------------------------------
+# ------------------------ INITIALIZATION METHODS ------------------------------
+# ------------------------------------------------------------------------------
+
+def sign_in(event):
+    """Defines what happens when the user selects their initials from the sign-in
+    menu. The first drop-down menu, the exception button, and the remove selected 
+    record button are activated, a welcome message is displayed, and populate_most_recent()
+    is called to display the map records most recently inventoried by the selected user."""
+
+    list(dropdowns.values())[0].enable()
+    exception_btn['state'] = NORMAL
+    remove_btn['state'] = NORMAL
+    dialog['foreground'] = '#0f0' # text will be green
+    dialogContents.set("Welcome, " + initials.get() + "!")
+    populate_most_recent(initials.get())
+
+def populate_most_recent(initials):
+    """Updates the table display to show the most recent 10 map records inventoried by the given user."""
+    # clear whatever's currently in the table
+    for item in tbl.get_children():
+        tbl.delete(item)
+    
+    # grab data on the most recent maps recorded by the given initials
+    rows = map_db.fetch_most_recent('usgs_topos_we_have', 'scan_id', initials)
+    exc_rows = map_db.fetch_most_recent('exception_maps_we_have', 'map_id', initials)
+    rows.extend(exc_rows)
+    # sort the most recent regular maps together with the most recent exceptions
+    most_recent = sorted(rows, key=lambda lst: int(lst[-1])) 
+
+    # add the 10 most recent rows to the table display
+    for row in most_recent[-10:]:
+        # convert empty values from database to (none) in table display
+        tbl_row = ["(none)" if val is None or val == '' else val for val in row[:-3]] 
+        # convert 1s and 0s from is_damaged and is_duplicate columns in database to read as True and False in table display
+        tbl_row.extend([bool(val) for val in row[-3:-1]]) 
+        tbl.insert('', 0, values=tbl_row)
+
+# ------------------------------------------------------------------------------
+# ----------------------- DROP-DOWN MENU METHODS -------------------------------
+# ------------------------------------------------------------------------------
+
+def dd_selected(cur_dd: LabeledDropDownMenu): 
+    """This method is called whenever a selection is made in a given drop-down menu.
+    When a selection is made (i.e. for a given map scale), the possible values of the 
+    primary state drop-down are updated to only show states for which maps were produced
+    at the given scale.  If there's only one state for a given map scale, that state
+    will be "locked in" and dd_selected will be called on the state drop-down in order
+    to update the values of the cell name drop-down. """
+    # disable the "record this map" button by default
+    add1_btn['state'] = tk.DISABLED
+
+    # if the user has made a selection for the last drop-down in the hierarchy,
+    # activate the "record this map" button and exit this method
+    if cur_dd.index == len(label_names) - 1:
+        add1_btn['state'] = tk.NORMAL
+        return None # exit this method, do not proceed to the remaining lines of code
+
+    # otherwise (if the selection is for some other drop-down), we want to alter
+    # the possible values of the next drop down menu in the hierarchy
+    next_dd = dropdowns[label_names[cur_dd.index + 1]]
+    next_dd.next_vals = cur_dd.next_vals[cur_dd.menu.get()]
+    vals = sorted(list(next_dd.next_vals.keys()), key=multisort)
+    # next_dd.menu['values'] = vals
+    next_dd.menu.set_completion_list(vals, lambda: dd_selected(next_dd), lambda: disable_next(next_dd))
+    
+    # blank out & disable all drop-down menus after whichever one was selected
+    # so that selections high in the hierarchy will clear out the following menus' values
+    for dd in list(dropdowns.values())[next_dd.index:]: 
+        dd.menu.set('')
+        dd.disable()
+
+    if len(vals) == 1:  # if there's only 1 possible value for the next drop down
+        # lock that value into that drop-down menu and disable it from selections
+        next_dd.menu.set(vals[0])
+        next_dd.disable()
+        # then, do what needs to be done in response to the next dd being selected
+        dd_selected(next_dd)
+    else: # if there are more than 1 possible values for the next drop down
+        # activate the next drop down so the user can make a selection on it
+        next_dd.enable()  
+
 def multisort(elem):
     """This method is a sort key designed to be able to sort by number if elements
     are numeric strings and sort alphabetically otherwise.  Normally, numeric
@@ -118,105 +244,32 @@ def grab_dd_values():
         data.append(dd.menu.get()) 
     return data
 
-# dropdowns, label names, add1 button
-def dd_selected(cur_dd: LabeledDropDownMenu): 
-    """given a selection in a given drop-down menu, control configuration of other drop-downs"""
-    # disable the we have 1 button by default
-    add1_btn['state'] = tk.DISABLED
-
-    # if the user has made a selection for the last drop-down in the hierarchy,
-    # activate the we have 1 and we have multiple buttons and exit this method
-    if cur_dd.index == len(label_names) - 1:
-        add1_btn['state'] = tk.NORMAL
-        return None # exit this method without doing anything
-
-    # otherwise (if the selection is for some other drop-down), we want to alter
-    # the possible values of the next drop down menu in the hierarchy
-    next_dd = dropdowns[label_names[cur_dd.index + 1]]
-    next_dd.next_vals = cur_dd.next_vals[cur_dd.menu.get()]
-    vals = sorted(list(next_dd.next_vals.keys()), key=multisort)
-    # next_dd.menu['values'] = vals
-    next_dd.menu.set_completion_list(vals, lambda: dd_selected(next_dd), lambda: disable_next(next_dd))
-    
-    # blank out & disable all drop-down menus after whichever one was selected
-    # so that selections high in the hierarchy will clear out the following menus' values
-    for dd in list(dropdowns.values())[next_dd.index:]: 
-        dd.menu.set('')
-        dd.disable()
-
-    if len(vals) == 1:  # if there's only 1 possible value for the next drop down
-        # lock that value into that drop-down menu and disable it from selections
-        next_dd.menu.set(vals[0])
-        next_dd.disable()
-        # then, do what needs to be done in response to the next dd being selected
-        dd_selected(next_dd)
-    else: # if there are more than 1 possible values for the next drop down
-        # activate the next drop down so the user can make a selection on it
-        next_dd.enable()  
-
 def prev_button(dd: LabeledDropDownMenu):
-    """toggle the value on a given drop-down menu to its previous value"""
-    # testing "prev" button for scale drop down
+    """toggle the value on a given drop-down menu to its previous possible value"""
     val = dd.menu.current()
     if val > 0: # if we're not at the beginning of the list of possible values
         dd.menu.current(val - 1) # set the drop down to the next value in the list of possible values
         dd_selected(dd)
 
 def next_button(dd: LabeledDropDownMenu):
-    """toggle the value on a given drop-down menu to its previous value"""
+    """toggle the value on a given drop-down menu to its next possible value"""
     val = dd.menu.current()
     if val != len(dd.menu['values']) - 1: # if we're not at the end of the list of possible values
         dd.menu.current(val + 1) # set the drop down to the next value in the list of possible values
         dd_selected(dd)
 
-def generate_new_id():
-    """reads next available ID number from a csv, writes a new number to that csv,
-    and returns the next available ID number.  Used for generating unique ID 
-    numbers for exception maps"""
-    new_id = file_io.read_next_exception_id("next_exception_id.csv")
-    file_io.write_next_exception_id("next_exception_id.csv", int(new_id) + 1)
-    return new_id
+# ------------------------------------------------------------------------------
+# ----------------------- EXCEPTION-RECORDING METHODS --------------------------
+# ------------------------------------------------------------------------------
 
-# dialog, dialogContents
-def remove_record(removal_id):
-    """deletes a given scan id from sqlite backend"""
-    table, id_name = "usgs_topos_we_have", "scan_id"
-    if len(str(removal_id)) < 6:
-        table, id_name = "exception_maps_we_have", "map_id"
-    before = map_db.fetch(table, id_name, removal_id)
-    if len(before) == 0:
-        dialog['foreground'] = '#f00' # text will be red
-        dialogContents.set("Map " + str(removal_id) + " has already been removed.")
-        return None
-    map_db.remove(table, id_name, removal_id)
-    remaining = map_db.fetch(table, id_name, removal_id)
-    if len(remaining) == 0:
-        # call the method to display confirmation of removal window
-        dialog['foreground'] = '#0f0' # text will be green
-        dialogContents.set("Map " + str(removal_id) + " successfully removed.")
-    else:
-        dialog['foreground'] = '#f00' # text will be red
-        dialogContents.set("Possible error removing map " + str(removal_id) + " from the database.")
-    pass
-
-#tbl
-def remove(removal_id, window):
-    remove_record(removal_id)
-    tbl.delete(tbl.selection())
-    window.destroy()
-
-# root
-def confirm_removal(removal_id):
-    top = Toplevel(root)
-    top.wm_transient(root)
-    top.grab_set() # makes it so user can't interact with the main window while the confirm removal window is open
-    top.geometry("400x250")
-    top.title("Confirm removal")
-    Label(top, text = "Please confirm that you want to remove map " + removal_id + ".").place(relx=0.5, rely=0.3, anchor=CENTER)
-    Button(top, text= "Yes, remove this record", foreground='#f00', command=lambda:remove(removal_id, top)).place(relx=0.5, rely=0.5, anchor=CENTER)
-
-# root, file_io. methods may interact with root stuff tho
 def record_exception(selected_vals):
+    """When the "Record an exception" button is pressed, create a new window where
+    users have more flexibility in recording map attributes. Attributes from the root
+    window that had been selected when the button was hit (selected vals) are "pre-loaded" 
+    into the exception window for convenience. With exception maps, the only thing we 
+    want to record besides what the user enters is the GNIS cell ID of the exception
+    map's cell name, if it uses the same cell system as USGS. Therefore, we also read
+    in data on GNIS cell IDs by state and cell and populate menu values accordingly."""
     exc = Toplevel(root)
     exc.wm_transient(root)
     exc.grab_set() # makes it so user can't interact with the main window while exception window is open
@@ -226,7 +279,7 @@ def record_exception(selected_vals):
     title = ttk.Label(content, text="Fill in as much information as possible about the map in hand.")
     title.grid(row=0, column=0, columnspan=6, rowspan=1, padx=100, pady=5)
     options = tk.Frame(content)
-    options.grid(row=1, column=0, columnspan=COL_WIDTH, rowspan=8, pady=5)
+    options.grid(row=1, column=0, columnspan=7, rowspan=8, pady=5)
 
     # producer radiobutton
     ttk.Label(content, text="Map producer:").grid(row=1, column=0, padx=10)
@@ -298,13 +351,15 @@ def record_exception(selected_vals):
     map_vars = [producer, scale_dd, state_dd, cell_dd, map_year_entry, 
         print_year_entry, sheet_entry, series_entry, edition_entry, dmgvar, dupevar]
 
-    record_exc_btn = ttk.Button(exc, text= "Record this map", command=lambda:insert_exc(map_vars, cells, exc))
+    record_exc_btn = ttk.Button(exc, text= "Record this map", command=lambda:insert_exception(map_vars, cells, exc))
     record_exc_btn.grid(row=8, column=0, columnspan=3, pady=10)
 
-# independent
-def insert_exc(exc_map_vars, cells, window):
+def insert_exception(exc_map_vars, cells, window):
+    """When the user hits the "Record this map" button on the exceptions window,
+    we first identify the GNIS cell ID of the exception map, if applicable. Then
+    we insert information about the exception map into both the table display 
+    and the SQLite database. Then, we close out the exceptions window."""
     map_info = [x.get() for x in exc_map_vars]
-    print(map_info)
     try:
         scale = int(map_info[1])
     except ValueError:
@@ -327,13 +382,11 @@ def insert_exc(exc_map_vars, cells, window):
     exc_tbl_row.extend(map_info[4:-2])
     exc_tbl_row.extend([int(x) for x in map_info[-2:]])
     exc_tbl_row.extend([initials.get(), int(datetime.now().strftime('%Y%m%d%H%M'))])
-    print(exc_tbl_row)
 
     # table display row
     tbl_dsply_row = [new_id]
     tbl_dsply_row.extend(map_info[:6])
     tbl_dsply_row.extend(map_info[-2:])
-    print(tbl_dsply_row)
 
     map_db.insert_exception(exc_tbl_row)
     inserted = map_db.fetch("exception_maps_we_have", "map_id", new_id)
@@ -346,44 +399,27 @@ def insert_exc(exc_map_vars, cells, window):
 
     window.destroy() # close the exception window
 
+def generate_new_id():
+    """reads next available ID number from a csv, writes a new number to that csv,
+    and returns the next available ID number.  Used for generating unique ID 
+    numbers for exception maps"""
+    new_id = file_io.read_next_exception_id("next_exception_id.csv")
+    file_io.write_next_exception_id("next_exception_id.csv", int(new_id) + 1)
+    return new_id
+
 # independent
 def state_selected(cells, state_dd, cell_dd):
     # cell_dd['values'] = sorted(list(cells[state_dd.get()].keys()), key=multisort)
     cell_dd.set_completion_list(sorted(list(cells[state_dd.get()].keys()), key=multisort))
     cell_dd.set('')
 
-# map_db / dialog / dialogContents / dmg / dupe
-def insert_exception(scan_id):
-    """inserts record for map we have on hand into sqlite backend, confirms the
-    insertion by selecting that record from the db, and then calls methods to add
-    that record to the table frame and print out a message, etc"""
-    # maybe insert, then fetch for confirmation?
-    before = map_db.fetch("usgs_topos_we_have", "scan_id", scan_id)
-    if len(before) > 0:
-        dialog['foreground'] = '#f00' # text will be red
-        dialogContents.set("Map " + str(scan_id) + " has already been recorded.")
-        return None
-    map_db.insert_topo(scan_id
-                , initials.get() # recorded_by
-                , int(datetime.now().strftime('%Y%m%d%H%M')) # recorded_time
-                , int(dmgvar.get()) # is_damaged (0 or 1)
-                , int(dupevar.get())) # is_duplicate (0 or 1)
-    inserted = map_db.fetch("usgs_topos_we_have", "scan_id", scan_id)
-    if len(inserted) == 1:
-        add_to_table(scan_id) # display record on table, as well as confirmation
-        dialog['foreground'] = '#0f0' # text will be green
-        dialogContents.set("Map " + str(scan_id) + " successfully recorded!")
-        dmgvar.set(False)
-        dupevar.set(False)
+# -------------------- removing (deleting) a record ---------------------------
 
-    else:
-        dialog['foreground'] = '#f00' # text will be red
-        dialogContents.set("Possible error inserting map " + str(scan_id) + " into the database.")
-
-# dialog / dialogContents 
 def remove_selected_record():
     """
-    Defines action that's taken when the Remove selected record button is pressed
+    This method is what's executed when the "Remove selected record" button is pressed.
+    It checks that exactly 1 table record is selected. If so, it calls confirm_removal().
+    If not, it gives the user an informative message through the dialog label.
     """
     selected = tbl.selection()
     if len(selected) == 1:
@@ -395,10 +431,61 @@ def remove_selected_record():
         dialog['foreground'] = '#f00' # text will be red
         dialogContents.set("Cannot remove more than one record at a time.")
 
-# dropdowns
-def we_have_1():
+def confirm_removal(removal_id):
     """
-    Defines action that's taken when the We have 1 button is pressed
+    To confirm the removal of a selected map from the table display, a new pop-up
+    window is created requiring the user to click an extra button to confirm.
+    """
+    top = Toplevel(root)
+    top.wm_transient(root)
+    top.grab_set() # makes it so user can't interact with the main window while the confirm removal window is open
+    top.geometry("400x250")
+    top.title("Confirm removal")
+    Label(top, text = "Please confirm that you want to remove map " + removal_id + ".")\
+        .place(relx=0.5, rely=0.3, anchor=CENTER)
+    Button(top, text= "Yes, remove this record", foreground='#f00', command=lambda:remove(removal_id, top))\
+        .place(relx=0.5, rely=0.5, anchor=CENTER)
+    
+def remove(removal_id, window):
+    """When the user confirms that they want to remove a given map from our records,
+    this method activates. It deletes the selected record from tbl, closes the extra pop-up window, 
+    and calls remove_record with the selected record's map ID to remove it from the database.
+    """
+    remove_record(removal_id)
+    tbl.delete(tbl.selection())
+    window.destroy()
+
+def remove_record(removal_id):
+    """Deletes the record corresponding with a given map ID from the SQLite database.
+    The number of digits in the map ID determines whether it's a regular topo or
+    an exception map, which determines which table to delete the record from.
+    This method also verifies that after removal, there are no more maps with the removed ID in the database."""
+    table, id_name = "usgs_topos_we_have", "scan_id"
+    if len(str(removal_id)) < 6:
+        table, id_name = "exception_maps_we_have", "map_id"
+    before = map_db.fetch(table, id_name, removal_id)
+    if len(before) == 0:
+        dialog['foreground'] = '#f00' # text will be red
+        dialogContents.set("Map " + str(removal_id) + " has already been removed.")
+        return None
+    map_db.remove(table, id_name, removal_id)
+    remaining = map_db.fetch(table, id_name, removal_id)
+    if len(remaining) == 0:
+        # call the method to display confirmation of removal window
+        dialog['foreground'] = '#0f0' # text will be green
+        dialogContents.set("Map " + str(removal_id) + " successfully removed.")
+    else:
+        dialog['foreground'] = '#f00' # text will be red
+        dialogContents.set("Possible error removing map " + str(removal_id) + " from the database.")
+
+# ------------------------- recording a map -------------------------------
+
+def record_this_map():
+    """
+    Defines what happens when the "Record this map" button is pressed. The result
+    values (the scan IDs and product URLs of matching map(s)) are extracted from 
+    the next_vals field of the last LDDM. If there's only one result, those values 
+    are inserted into the database. Otherwise, we call select_from_multiple().
     """
     # This method does not check whether all possible selections have been made,
     # because it is assumed that this method will only be called when all required 
@@ -414,16 +501,17 @@ def we_have_1():
     else:
         select_from_multiple(results)
 
-# independent
 def select_from_multiple(results):
-    """create the pop-up window where the user chooses which map record matches
-    the map physically in hand by opening up the links to the different options"""
+    """Creates a pop-up window where the user chooses which of the resulting
+    map records matches the map physically in hand. Each map is an option on a 
+    radiobutton, and each option has a button which will open up the map pdf in 
+    the user's web browser.  by opening up the links to the different options"""
     win = Toplevel(root)
     win.wm_transient(root)
     win.title("Multiple matches found")
     ttk.Label(win, text="The USGS database has multiple records for that map.  Please select the record that matches the map in hand.").grid(row=0, columnspan=2, pady=20, padx=20)
     choices = StringVar()
-    record_btn = Button(win, text="Record this map", command=lambda: record_this_map(choices.get(), win), state=DISABLED)
+    record_btn = Button(win, text="Record this map", command=lambda: record_chosen_map(choices.get(), win), state=DISABLED)
 
     for idx, result in enumerate(results):
         result_id = result[0]
@@ -433,14 +521,15 @@ def select_from_multiple(results):
     
     record_btn.grid(row=idx+2, column=0, columnspan=2, pady=20)
 
-# independent
-def record_this_map(scan_id, window):
+def record_chosen_map(scan_id, window):
+    """When the user clicks on the button on the multiple matches window to record
+    a given map, that map is inserted into the database using its ID and the pop-up
+    window is closed."""
     insert_record(scan_id)
     window.destroy()
 
-# map_db / dialog / dialogContents / dmg / dupe
 def insert_record(scan_id):
-    """inserts record for map we have on hand into sqlite backend, confirms the
+    """Inserts record for map we have on hand into sqlite backend, confirms the
     insertion by selecting that record from the db, and then calls methods to add
     that record to the table frame and print out a message, etc"""
     # maybe insert, then fetch for confirmation?
@@ -467,61 +556,21 @@ def insert_record(scan_id):
         dialog['foreground'] = '#f00' # text will be red
         dialogContents.set("Possible error inserting map " + str(scan_id) + " into the database.")
 
-# tbl
 def add_to_table(scan_id):
-    """insert info about a map we have into the display table"""
+    """Given the ID of a map, insert information about a map (whatever is currently
+    selected in the drop-down menus and checkboxes) into the table display (tbl)"""
     tbl_vals = [scan_id, 'USGS'] 
     tbl_vals.extend(grab_dd_values())
-    # replace 'no' with dupe_var once created 
     tbl_vals.extend([dmgvar.get(), dupevar.get()])
     tbl.insert('', 0, values=tbl_vals)
+    # below are the columns that will be in the table display:
     # ('Scan ID', 'Producer', 'Map Scale', 'Primary State', 'Cell Name', 'Map Year', 'Print Year', 'Damaged', 'Duplicate')
-
-# dropdowns, exc button, rmv button / dialog / dialogContents / initials
-def sign_in(event):
-    """selection is made on the initials drop down"""
-
-    # # This if-block supports users typing in their own initials, by updating the csv file of users with the new initials
-    # if initials.get() not in initials['values']: # if someone types in a new username
-    #     # add their entry to the drop-down of possible values
-    #     initials['values'] = (*initials['values'], initials.get())
-    #     # and save the new set of possible values to users.csv
-    #     file_io.write_users('users.csv', initials['values'])
-
-    list(dropdowns.values())[0].enable() # enable the first drop-down menu
-    exception_btn['state'] = NORMAL
-    remove_btn['state'] = NORMAL
-
-    # print a confirmation for sign-in
-    dialog['foreground'] = '#0f0' # text will be green
-    dialogContents.set("Welcome, " + initials.get() + "!")
-
-    # also, call the method to update table with that person's stuff
-    populate_most_recent(initials.get())
-
-# tbl / map_db
-def populate_most_recent(initials):
-    # clear whatever's currently in the table
-    for item in tbl.get_children():
-        tbl.delete(item)
-    
-    # grab the most recent maps recorded by the given initials, add them to table
-    rows = map_db.fetch_most_recent('usgs_topos_we_have', 'scan_id', initials)
-    exc_rows = map_db.fetch_most_recent('exception_maps_we_have', 'map_id', initials)
-    rows.extend(exc_rows)
-    most_recent = sorted(rows, key=lambda lst: int(lst[-1]))
-    for row in most_recent[-10:]:
-        tbl_row = ["(none)" if val is None or val == '' else val for val in row[:-3]] # convert empty values from database to (none) in table
-        tbl_row.extend([bool(val) for val in row[-3:-1]]) # convert 1s and 0s from is_damaged and is_duplicate columns to True and False for table
-        tbl.insert('', 0, values=tbl_row)
 
 def disable_next(lddm):
     if lddm.index < len(dropdowns) - 1:
         dropdowns[label_names[lddm.index + 1]].disable()
     else:
         add1_btn['state'] = tk.DISABLED
-
-COL_WIDTH = 7
 
 # ------------------- initialize tkinter window -----------------
 
@@ -590,7 +639,7 @@ exception_btn = ttk.Button(options, text='Record an exception', command=lambda: 
 
 remove_btn = ttk.Button(options, text='Remove selected record', command=remove_selected_record, state=DISABLED)
 
-add1_btn = ttk.Button(options, text='Record this map', command=we_have_1, state=DISABLED)
+add1_btn = ttk.Button(options, text='Record this map', command=record_this_map, state=DISABLED)
 
 dialogContents = StringVar()
 dialog = ttk.Label(options)
@@ -614,13 +663,13 @@ tbl.configure(yscroll=tbl_scroll.set)
 # -------------------- place widgets onto the main window -------------------
 
 # ---- header frame ----
-header.grid(row=0, column=0, columnspan=COL_WIDTH, rowspan=1, pady=5)
+header.grid(row=0, column=0, columnspan=7, rowspan=1, pady=5)
 title.grid(row=0, column=0, columnspan=5, rowspan=1, padx=100, pady=5)
 sign_in_label.grid(row=0, column=5)
 initials.grid(row=0, column=6, padx=20)
 
 # ---- options frame ----
-options.grid(row=1, column=0, columnspan=COL_WIDTH, rowspan=8, pady=5)
+options.grid(row=1, column=0, columnspan=7, rowspan=8, pady=5)
 
 for idx, dd in enumerate(dropdowns.values()):
     r = (idx%3)*2 + 1  # creates three rows of drop downs, starting at row 1, with
