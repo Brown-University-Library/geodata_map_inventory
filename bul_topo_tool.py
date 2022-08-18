@@ -26,7 +26,7 @@ Licensed same as original (not specified?), or public domain, whichever is less 
 Source: https://mail.python.org/pipermail/tkinter-discuss/2012-January/003041.html
 """
 class AutocompleteCombobox(ttk.Combobox):
-        def set_completion_list(self, completion_list, select_func=None):
+        def set_completion_list(self, completion_list, select_func=None, disable_next=None):
                 """Use our completion list as our drop down selection menu, arrows move through menu.
                 Optional select_func argument allows you to specify function that should be called when an autocomplete is performed"""
                 self._completion_list = completion_list
@@ -36,6 +36,7 @@ class AutocompleteCombobox(ttk.Combobox):
                 self.bind('<KeyRelease>', self.handle_keyrelease)
                 self['values'] = self._completion_list  # Setup our popup menu
                 self.select_func = select_func
+                self.disable_next = disable_next
 
         def autocomplete(self, delta=0):
                 """autocomplete the Combobox, delta may be 0/1/-1 to cycle through possible hits"""
@@ -62,12 +63,19 @@ class AutocompleteCombobox(ttk.Combobox):
                         self.select_range(self.position,tk.END)
                         if self.select_func is not None:
                             self.select_func()
+                else: # if whatever is typed into the box does not match a pre-set option
+                    if self.disable_next is not None:
+                        self.disable_next()
 
         def handle_keyrelease(self, event):
                 """event handler for the keyrelease event on this widget"""
                 if event.keysym == "BackSpace":
                         self.delete(self.index(tk.INSERT), tk.END)
                         self.position = self.index(tk.END)
+                        if self.get() not in self._completion_list:
+                            self.disable_next()
+                        else:
+                            self.select_func()
                 if event.keysym == "Left":
                         if self.position < self.index(tk.END): # delete the selection
                                 self.delete(self.position, tk.END)
@@ -130,7 +138,7 @@ def dd_selected(cur_dd: LabeledDropDownMenu):
     next_dd.next_vals = cur_dd.next_vals[cur_dd.menu.get()]
     vals = sorted(list(next_dd.next_vals.keys()), key=multisort)
     # next_dd.menu['values'] = vals
-    next_dd.menu.set_completion_list(vals, lambda: dd_selected(next_dd))
+    next_dd.menu.set_completion_list(vals, lambda: dd_selected(next_dd), lambda: disable_next(next_dd))
     
     # blank out & disable all drop-down menus after whichever one was selected
     # so that selections high in the hierarchy will clear out the following menus' values
@@ -509,6 +517,10 @@ def populate_most_recent(initials):
         tbl_row.extend([bool(val) for val in row[-3:-1]]) # convert 1s and 0s from is_damaged and is_duplicate columns to True and False for table
         tbl.insert('', 0, values=tbl_row)
 
+def disable_next(lddm):
+    if lddm.index < len(dropdowns) - 1:
+        dropdowns[label_names[lddm.index + 1]].disable()
+
 COL_WIDTH = 7
 
 # ------------------- initialize tkinter window -----------------
@@ -554,7 +566,7 @@ file_io.read_topos('usgs_topos.csv', maps)
 first_dd = list(dropdowns.values())[0] # access the first labeled dropdown menu
 first_dd.next_vals = maps
 # first_dd.menu['values'] = sorted(list(maps.keys()), key=multisort) # or whatever corresponding dict's keys
-first_dd.menu.set_completion_list(sorted(list(maps.keys()), key=multisort), lambda: dd_selected(first_dd))
+first_dd.menu.set_completion_list(sorted(list(maps.keys()), key=multisort), lambda: dd_selected(first_dd), lambda: disable_next(first_dd))
 # first_dd['state'] = 'readonly'
 
 # bind each dropdown to dd_selected with itself as an argument, and each prev or
