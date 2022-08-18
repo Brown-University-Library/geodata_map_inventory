@@ -1,5 +1,5 @@
-# README for the BUL Topo Map Inventory Tool
-Introductory text here
+# Welcome to the BUL Topo Map Inventory Tool
+This is a Python command-line tool that we built to help us take inventory of the topographic maps in Brown University's map collection in the Sciences Library. Instead of having people manually record the attributes of each map, we set up a graphical user interface with tkinter which allows people to select the key attributes of each map using drop-down menus and buttons. The options available in each drop-down menu are populated with data from the USGS Historical Topographic Map Collection (HTMC), and the menus are dynamically updated based on user selections, allowing users to match each physical map to its corresponding digital record with as little hassle as possible. Checkboxes allow users to flag maps that are damaged or for which we have duplicates, and there is a workflow for recording "exception" maps, or topographic maps that are filed in our collection but aren't part of the HTMC, even if they use some of the same attribute schema. Behind the scenes, information about each map that we record using the tool is stored in a SQLite database.
 
 ### Requirements for running the tool
 - You need to be granted access to the Brown University Library shared drive.
