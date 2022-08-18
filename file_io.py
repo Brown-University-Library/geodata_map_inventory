@@ -140,9 +140,11 @@ if __name__ == '__main__':
     # example of how to call read_topos()
     mymaps = {}
     read_topos('usgs_topos.csv', mymaps)
+    print("read_topos() example:")
     print(mymaps['24000']['Oregon']['Sparta'])
 
     # example of how to call read_gnis()
     mycells = {}
     read_gnis('usgs_topos.csv', mycells)
+    print("read_gnis() example:")
     print(mycells['Oregon']['Sparta'])

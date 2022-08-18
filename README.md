@@ -1,5 +1,28 @@
-# geodata_map_inventory
-GUI and SQLite backed for inventorying USGS maps
+# README for the BUL Topo Map Inventory Tool
+Introductory text here
+
+### Requirements for running the tool
+- You need to be granted access to the Brown University Library shared drive.
+- Your computer needs to have Python 3 or higher installed.
+- You need to install the pandas module into your Python interpreter, if you don't have it already. All other modules needed for the tool are in the Python Standard Library.
+
+### How to run the tool
+1. Clone this repository somewhere on your computer.
+2. Open a terminal with the geodata_map_inventory folder as the working directory.
+3. Run either ```python bul_topo_tool.py``` or ```python3 bul_topo_tool.py```, depending on how your Python is set up.
+4. The tool should open in its own window. To stop the program, just close the window.
+
+### File Descriptions
+| file name | description                                                                                                  |
+| --------- | ------------------------------------------------------------------------------------------------------------ |
+| bul_topo_tool.py | This is the only .py file that's meant to be run directly. Everything else is "supporting material". Any code having to do with the graphics and layout of the tool is here, and so is most of the logic governing what different buttons do and how they interact with each other. |
+| file_io.py | These methods are for getting data in and out (io) of the csv files in this repository.
+| db.py | These methods are for using SQL commands to interact with the .db file on the library shared drive where our topo map inventory data gets stored.
+| usgs_topos.csv | A table with information about every map in the USGS's [Historical Topographic Map Collection](https://www.usgs.gov/programs/national-geospatial-program/historical-topographic-maps-preserving-past) (HTMC). |
+| users.csv | A list of authorized users of the BUL Topo Map Inventory Tool (initials only). |
+| next_exception_id.csv | Stores a 5-digit number that will be assigned as the unique identifier of the next "exception map" we find (any map that's physically in our collection but isn't part of the HTMC. Each time we record an exception map, this number gets updated.)
+
+### Development Notes
 
 Completed:
 - reading in the USGS topo data into a nested dictionary structure
@@ -26,22 +49,9 @@ Completed:
 - both tables have a producer column, and most recent 10 methods are updated to reflect that
 
 To-do:
-- verify that for duplicate gnis IDs its safe to just choose the Standard one - do we have over or undersized maps
-- should exception IDs be uniquely identifiable by map attributes?
-- should the pre-loading carry over stuff that's locked in? it currently does
-- should the pre-loading disable whatever is pre-loaded from being manipulated?
-- generate new id should maybe have a list of available IDs that can also be replenished upon removals
 - comment and reorganize code (next: read_topos should take columns as an ordered input parameter)
-
-columns in exceptions table:db everything in exception window (normal map stuff plus series sheet edition), id, recorded by, recorded time
-on the exceptions window, the fab five will be text entry, but map scale, state, and cell name will also be drop-downs
-state and cell will be hooked up to each other, but not map scale.  this might require a new read-in method, with GNIS as the value
-map year and print year will just be text entry, restricted to 4-character numerical values
-I don't know if entry should be restricted to 1 menu at a time, or just open-season (will do latter for now)
-producer will be a radiobutton (maybe with an Other text entry, maybe not)
-we will still have checkboxes for duplicate and damage, and then a record this map
-sign-in methods will need to adjusted to get top ten from either of the tables, not just the one
-remove selected record will also need a way of navigating multiple tables depending on what is selected
+- write a proper readme (high level description of what each of the py files does)
+- try implementing autocomplete for drop down menus (implement for other menus on main window)
 
 Important notes:
 - writing to the network db file does not work when someone has the db in writing

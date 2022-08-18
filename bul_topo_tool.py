@@ -14,6 +14,72 @@ import webbrowser
 tool_title = 'BUL Topo Map Inventory Tool'
 map_db = db.Database('//files.brown.edu/DFS/Library_Shared/_geodata/maps/maps_we_have_test.db')
 
+# ------------------- AUTOCOMPLETE COMBOBOX CLASS -------------------------
+"""
+The code below for the AutocompleteCombobox class was created by the following
+authors. I modified their code only slightly to make it interact with dd_selected().
+
+Created by Mitja Martini on 2008-11-29.
+Updated by Russell Adams, 2011/01/24 to support Python 3 and Combobox.
+Licensed same as original (not specified?), or public domain, whichever is less restrictive.
+
+Source: https://mail.python.org/pipermail/tkinter-discuss/2012-January/003041.html
+"""
+class AutocompleteCombobox(ttk.Combobox):
+
+        def set_completion_list(self, completion_list, lddm):
+                """Use our completion list as our drop down selection menu, arrows move through menu."""
+                self._completion_list = completion_list
+                self._hits = []
+                self._hit_index = 0
+                self.position = 0
+                self.bind('<KeyRelease>', self.handle_keyrelease)
+                self['values'] = self._completion_list  # Setup our popup menu
+                self.lddm = lddm
+
+        def autocomplete(self, delta=0):
+                """autocomplete the Combobox, delta may be 0/1/-1 to cycle through possible hits"""
+                if delta: # need to delete selection otherwise we would fix the current position
+                        self.delete(self.position, tk.END)
+                else: # set position to end so selection starts where textentry ended
+                        self.position = len(self.get())
+                # collect hits
+                _hits = []
+                for element in self._completion_list:
+                        if element.lower().startswith(self.get().lower()): # Match case insensitively
+                                _hits.append(element)
+                # if we have a new hit list, keep this in mind
+                if _hits != self._hits:
+                        self._hit_index = 0
+                        self._hits=_hits
+                # only allow cycling if we are in a known hit list
+                if _hits == self._hits and self._hits:
+                        self._hit_index = (self._hit_index + delta) % len(self._hits)
+                # now finally perform the auto completion
+                if self._hits:
+                        self.delete(0,tk.END)
+                        self.insert(0,self._hits[self._hit_index])
+                        self.select_range(self.position,tk.END)
+                        dd_selected(self.lddm)
+
+        def handle_keyrelease(self, event):
+                """event handler for the keyrelease event on this widget"""
+                if event.keysym == "BackSpace":
+                        self.delete(self.index(tk.INSERT), tk.END)
+                        self.position = self.index(tk.END)
+                if event.keysym == "Left":
+                        if self.position < self.index(tk.END): # delete the selection
+                                self.delete(self.position, tk.END)
+                        else:
+                                self.position = self.position-1 # delete one character
+                                self.delete(self.position, tk.END)
+                if event.keysym == "Right":
+                        self.position = self.index(tk.END) # go to end (no selection)
+                if len(event.keysym) == 1:
+                        self.autocomplete()
+                # No need for up/down, we'll jump to the popup
+                # list at the position of the autocompletion
+
 # -------------- METHODS -----------------
 def multisort(elem):
     """This method is a sort key designed to be able to sort by number if elements
@@ -84,7 +150,7 @@ def prev_button(dd: LabeledDropDownMenu):
     """toggle the value on a given drop-down menu to its previous value"""
     # testing "prev" button for scale drop down
     val = dd.menu.current()
-    if val != 0: # if we're not at the beginning of the list of possible values
+    if val > 0: # if we're not at the beginning of the list of possible values
         dd.menu.current(val - 1) # set the drop down to the next value in the list of possible values
         dd_selected(dd)
 
@@ -141,7 +207,7 @@ def confirm_removal(removal_id):
     Label(top, text = "Please confirm that you want to remove map " + removal_id + ".").place(relx=0.5, rely=0.3, anchor=CENTER)
     Button(top, text= "Yes, remove this record", foreground='#f00', command=lambda:remove(removal_id, top)).place(relx=0.5, rely=0.5, anchor=CENTER)
 
-# root
+# root, file_io. methods may interact with root stuff tho
 def record_exception(selected_vals):
     exc = Toplevel(root)
     exc.wm_transient(root)
@@ -469,7 +535,7 @@ dropdowns = OrderedDict()
 
 for idx, lbl in enumerate(label_names):
     dropdowns[lbl] = LabeledDropDownMenu(ttk.Label(options, text=lbl + ": ")
-        , ttk.Combobox(options, state=DISABLED)
+        , AutocompleteCombobox(options, state=DISABLED)
         , ttk.Button(options, text="^", state=DISABLED)
         , ttk.Button(options, text="v", state=DISABLED)
         , idx
@@ -484,7 +550,8 @@ file_io.read_topos('usgs_topos.csv', maps)
 # initialize the first dropdown
 first_dd = list(dropdowns.values())[0] # access the first labeled dropdown menu
 first_dd.next_vals = maps
-first_dd.menu['values'] = sorted(list(maps.keys()), key=multisort) # or whatever corresponding dict's keys
+# first_dd.menu['values'] = sorted(list(maps.keys()), key=multisort) # or whatever corresponding dict's keys
+first_dd.menu.set_completion_list(sorted(list(maps.keys()), key=multisort), first_dd)
 # first_dd['state'] = 'readonly'
 
 # bind each dropdown to dd_selected with itself as an argument, and each prev or
