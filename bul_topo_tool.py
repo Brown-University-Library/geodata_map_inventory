@@ -3,7 +3,7 @@
 # This is where the GUI will actually run (where the user window is configured, 
 # and where calls to the backend are made in response to user selections)
 
-from lddm import *
+import tkinter as tk
 from tkinter import *
 from tkinter import ttk
 import file_io, db # other files in this package
