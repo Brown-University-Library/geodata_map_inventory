@@ -61,11 +61,9 @@ class AutocompleteCombobox(ttk.Combobox):
                         self.delete(0,tk.END)
                         self.insert(0,self._hits[self._hit_index])
                         self.select_range(self.position,tk.END)
-                        if self.select_func is not None:
-                            self.select_func()
+                        self.select_func()
                 else: # if whatever is typed into the box does not match a pre-set option
-                    if self.disable_next is not None:
-                        self.disable_next()
+                    self.disable_next()
 
         def handle_keyrelease(self, event):
                 """event handler for the keyrelease event on this widget"""
@@ -520,6 +518,8 @@ def populate_most_recent(initials):
 def disable_next(lddm):
     if lddm.index < len(dropdowns) - 1:
         dropdowns[label_names[lddm.index + 1]].disable()
+    else:
+        add1_btn['state'] = tk.DISABLED
 
 COL_WIDTH = 7
 
