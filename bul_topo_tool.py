@@ -16,8 +16,8 @@ map_db = db.Database('//files.brown.edu/DFS/Library_Shared/_geodata/maps/maps_we
 
 # ------------------- AUTOCOMPLETE COMBOBOX CLASS -------------------------
 """
-The code below for the AutocompleteCombobox class was created by the following
-authors. I modified their code only slightly to make it interact with dd_selected().
+The code below for this AutocompleteCombobox class was created by the following
+authors. I modified their code only slightly to make it interact with menu selection functions.
 
 Created by Mitja Martini on 2008-11-29.
 Updated by Russell Adams, 2011/01/24 to support Python 3 and Combobox.
@@ -26,16 +26,16 @@ Licensed same as original (not specified?), or public domain, whichever is less 
 Source: https://mail.python.org/pipermail/tkinter-discuss/2012-January/003041.html
 """
 class AutocompleteCombobox(ttk.Combobox):
-
-        def set_completion_list(self, completion_list, lddm):
-                """Use our completion list as our drop down selection menu, arrows move through menu."""
+        def set_completion_list(self, completion_list, select_func=None):
+                """Use our completion list as our drop down selection menu, arrows move through menu.
+                Optional select_func argument allows you to specify function that should be called when an autocomplete is performed"""
                 self._completion_list = completion_list
                 self._hits = []
                 self._hit_index = 0
                 self.position = 0
                 self.bind('<KeyRelease>', self.handle_keyrelease)
                 self['values'] = self._completion_list  # Setup our popup menu
-                self.lddm = lddm
+                self.select_func = select_func
 
         def autocomplete(self, delta=0):
                 """autocomplete the Combobox, delta may be 0/1/-1 to cycle through possible hits"""
@@ -60,7 +60,8 @@ class AutocompleteCombobox(ttk.Combobox):
                         self.delete(0,tk.END)
                         self.insert(0,self._hits[self._hit_index])
                         self.select_range(self.position,tk.END)
-                        dd_selected(self.lddm)
+                        if self.select_func is not None:
+                            self.select_func()
 
         def handle_keyrelease(self, event):
                 """event handler for the keyrelease event on this widget"""
@@ -128,7 +129,8 @@ def dd_selected(cur_dd: LabeledDropDownMenu):
     next_dd = dropdowns[label_names[cur_dd.index + 1]]
     next_dd.next_vals = cur_dd.next_vals[cur_dd.menu.get()]
     vals = sorted(list(next_dd.next_vals.keys()), key=multisort)
-    next_dd.menu['values'] = vals
+    # next_dd.menu['values'] = vals
+    next_dd.menu.set_completion_list(vals, lambda: dd_selected(next_dd))
     
     # blank out & disable all drop-down menus after whichever one was selected
     # so that selections high in the hierarchy will clear out the following menus' values
@@ -229,22 +231,22 @@ def record_exception(selected_vals):
 
     # # labeled drop down menus for scale, state, and cell name
     ttk.Label(options, text="Map Scale:").grid(row=1, column=3, pady=5, sticky='e')
-    scale_dd = ttk.Combobox(options)
+    scale_dd = AutocompleteCombobox(options)
     scale_dd.grid(row=1, column=4, columnspan=2, pady=5, sticky='w')
-    scale_dd['values'] = sorted(list(maps.keys()), key=multisort)
+    scale_dd.set_completion_list(sorted(list(maps.keys()), key=multisort))
 
     # load in information about GNIS cell IDs for given states and cells
     cells = {}
     file_io.read_gnis("usgs_topos.csv", cells)
 
     ttk.Label(options, text="Cell Name:").grid(row=3, column=3, pady=5, sticky='e')
-    cell_dd = ttk.Combobox(options, state=NORMAL) # , state=DISABLED
+    cell_dd = AutocompleteCombobox(options, state=NORMAL) # , state=DISABLED
     cell_dd.grid(row=3, column=4, columnspan=2, pady=5, sticky='w')
 
     ttk.Label(options, text="Primary State:").grid(row=2, column=3, pady=5, sticky='e')
-    state_dd = ttk.Combobox(options)
+    state_dd = AutocompleteCombobox(options)
     state_dd.grid(row=2, column=4, columnspan=2, pady=5, sticky='w')
-    state_dd['values'] = sorted(list(cells.keys()), key=multisort)
+    state_dd.set_completion_list(sorted(list(cells.keys()), key=multisort), lambda: state_selected(cells, state_dd, cell_dd))
     state_dd.bind('<<ComboboxSelected>>', lambda event, sdd=state_dd, cdd=cell_dd: state_selected(cells, sdd, cdd))
 
     ttk.Label(options, text="Map Year:").grid(row=4, column=3, pady=5, sticky='e')
@@ -340,7 +342,8 @@ def insert_exc(exc_map_vars, cells, window):
 
 # independent
 def state_selected(cells, state_dd, cell_dd):
-    cell_dd['values'] = sorted(list(cells[state_dd.get()].keys()), key=multisort)
+    # cell_dd['values'] = sorted(list(cells[state_dd.get()].keys()), key=multisort)
+    cell_dd.set_completion_list(sorted(list(cells[state_dd.get()].keys()), key=multisort))
     cell_dd.set('')
 
 # map_db / dialog / dialogContents / dmg / dupe
@@ -551,7 +554,7 @@ file_io.read_topos('usgs_topos.csv', maps)
 first_dd = list(dropdowns.values())[0] # access the first labeled dropdown menu
 first_dd.next_vals = maps
 # first_dd.menu['values'] = sorted(list(maps.keys()), key=multisort) # or whatever corresponding dict's keys
-first_dd.menu.set_completion_list(sorted(list(maps.keys()), key=multisort), first_dd)
+first_dd.menu.set_completion_list(sorted(list(maps.keys()), key=multisort), lambda: dd_selected(first_dd))
 # first_dd['state'] = 'readonly'
 
 # bind each dropdown to dd_selected with itself as an argument, and each prev or

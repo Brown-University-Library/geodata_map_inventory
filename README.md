@@ -47,6 +47,7 @@ Completed:
 - exception handling window is created, insert exception method is complete, and sign-in method is updated to accommodate both tables
 - pre-loading of exception information from main window is complete, and remove selected method is updated
 - both tables have a producer column, and most recent 10 methods are updated to reflect that
+- all drop-downs on the main window now have autocomplete
 
 To-do:
 - comment and reorganize code (next: read_topos should take columns as an ordered input parameter)
