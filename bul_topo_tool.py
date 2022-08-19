@@ -1,7 +1,4 @@
 # Ethan McIntosh - GIS and Data Services - Brown University - August 2022
-# -----------------------------------------------------------------------------
-# This is the main script for the BUL Map Topo tool. Here is where the user window is
-# configured and where calls to the backend are made in response to user selections.
 
 import tkinter as tk
 from tkinter import ttk
@@ -246,36 +243,6 @@ def populate_most_recent(initials):
         # convert 1s and 0s from is_damaged and is_duplicate columns in database to read as True and False in table display
         tbl_row.extend([bool(val) for val in row[-3:-1]]) 
         tbl.insert('', 0, values=tbl_row)
-
-# ------------------------------------------------------------------------------
-# ------------- METHODS DEALING WITH DROP-DOWN MENU INTERACTIONS ---------------
-# ------------------------------------------------------------------------------
-
-# ------------------------------------------------------------------------------
-# ----------------------------- SORTING METHODS --------------------------------
-# ------------------------------------------------------------------------------
-
-def multisort(elem):
-    """This method is a sort key designed to be able to sort by number if elements
-    are numeric strings and sort alphabetically otherwise.  Normally, numeric
-    strings would be sorted like they're letters. This method also handles missing 
-    values that have been filled in as '(none)' in otherwise numeric-string 
-    columns, by treating them as zeroes."""
-
-    if elem == '(none)':
-         return 0
-    elif is_number(elem):
-        return float(elem)
-    else: 
-        return elem
-
-def is_number(s):
-    """Given a string s, returns true if the string is numeric and false otherwise."""
-    try:
-        float(s)
-        return True
-    except ValueError:
-        return False
 
 # ------------------------------------------------------------------------------
 # -------------------------- RECORDING MAPS METHODS ----------------------------
@@ -616,6 +583,32 @@ def remove_record(removal_id):
     else:
         dialog['foreground'] = '#f00' # text will be red
         dialogContents.set("Possible error removing map " + str(removal_id) + " from the database.")
+
+# ------------------------------------------------------------------------------
+# ------------------------ MISCELLANEOUS METHODS -------------------------------
+# ------------------------------------------------------------------------------
+
+def multisort(elem):
+    """This method is a sort key designed to be able to sort by number if elements
+    are numeric strings and sort alphabetically otherwise.  Normally, numeric
+    strings would be sorted like they're letters. This method also handles missing 
+    values that have been filled in as '(none)' in otherwise numeric-string 
+    columns, by treating them as zeroes."""
+
+    if elem == '(none)':
+         return 0
+    elif is_number(elem):
+        return float(elem)
+    else: 
+        return elem
+
+def is_number(s):
+    """Given a string s, returns true if the string is numeric and false otherwise."""
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
 
 # ------------------------------------------------------------------------------
 # -------------------------- BUILD THE MAIN WINDOW -----------------------------

@@ -24,6 +24,12 @@ This is a Python command-line tool that we built to help us take inventory of th
 
 ### Development Notes
 
+This is a tkinter application built around 2 custom data structures: an AutocompleteCombobox (a drop-down menu that autocompletes typed-in entries) and a LabeledDropDownMenu, which bundles together a drop-down menu with other tkinter widgets and links these bundled objects to each other in a hierarchical order, which facilitates the dynamic updating of one menu's options based on user selections on the others. 
+
+The main executable script file (bul_topo_tool.py) is organized into sections, starting with the code for these custom classes. Below that are sections for tool initialization, recording regular maps, recording exception maps, removing records, and miscellaneous operations, all of which solely consist of methods. The code that actually builds the main tool window and runs the application is at the bottom, after the methods.
+
+### Scratch
+
 Completed:
 - reading in the USGS topo data into a nested dictionary structure
 - basic skeleton of the GUI window
@@ -48,12 +54,6 @@ Completed:
 - pre-loading of exception information from main window is complete, and remove selected method is updated
 - both tables have a producer column, and most recent 10 methods are updated to reflect that
 - all drop-downs on the main window now have autocomplete
-
-To-do:
-- comment and reorganize code (next: read_topos should take columns as an ordered input parameter)
-- write a proper readme (high level description of what each of the py files does)
-- clean up imports
-- try implementing autocomplete for drop down menus (implement for other menus on main window)
 
 Important notes:
 - writing to the network db file does not work when someone has the db in writing
