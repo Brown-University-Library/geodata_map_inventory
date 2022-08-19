@@ -194,7 +194,7 @@ class LabeledDropDownMenu:
         # for dd in list(dropdowns.values())[next_dd.index:]: 
         #     dd.menu.set('')
         #     dd.disable()
-        next_dd.disable_next()
+        self.disable_next()
 
         if len(vals) == 1:  # if there's only 1 possible value for the next drop down
             # lock that value into that drop-down menu and disable it from selections
