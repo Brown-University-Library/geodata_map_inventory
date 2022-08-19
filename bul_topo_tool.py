@@ -1,15 +1,13 @@
 # Ethan McIntosh - GIS and Data Services - Brown University - August 2022
 # -----------------------------------------------------------------------------
-# This is where the GUI will actually run (where the user window is configured, 
-# and where calls to the backend are made in response to user selections)
+# This is the main script for the BUL Map Topo tool. Here is where the user window is
+# configured and where calls to the backend are made in response to user selections.
 
 import tkinter as tk
-from tkinter import *
 from tkinter import ttk
-import file_io, db # other files in this package
-from collections import OrderedDict
-from datetime import datetime
 import webbrowser
+from datetime import datetime
+import file_io, db # import the other files in this package
 
 tool_title = 'BUL Topo Map Inventory Tool'
 map_db = db.Database('//files.brown.edu/DFS/Library_Shared/_geodata/maps/maps_we_have_test.db')
@@ -102,13 +100,13 @@ class AutocompleteCombobox(ttk.Combobox):
             # list at the position of the autocompletion
 
 class LabeledDropDownMenu:
-    """This class is meant to bundle together several tkinter widgets and some 
+    """This class is meant to bundle drop-down menus with other tkinter widgets and with 
     associated data into a single object. This bundling makes it easier to have a 
     series of drop-down menus that trigger actions on each other in response to 
     selections, and which can each have their own previous and next buttons.
     """
-    def __init__(self, label: Label, menu: AutocompleteCombobox, prev: Button, 
-                next: Button, index: int, next_vals: dict):
+    def __init__(self, label: tk.Label, menu: AutocompleteCombobox, prev: tk.Button, 
+                next: tk.Button, index: int, next_vals: dict):
         """Initialize the tkinter widgets (label, menu, prev, next) and associated
         data like index (the position of this drop-down menu in the hierarchy) and 
         next_vals (a dictionary whose keys are the possible values of the menu).
@@ -158,11 +156,14 @@ class LabeledDropDownMenu:
             self.dd_selected()
 
     def disable_next(self):
-        """Disable the next drop-down menu from this one within the dropdowns
-        hierarchy, and also disable the "record this map" button on the main window.
+        """Disable the next drop-down menu within the dropdowns hierarchy, as well
+        as all other menus after the next one. If we're on the last menu, disable 
+        the "record this map" button on the main window instead.
         """
         if self.index < len(dropdowns) - 1:
-            dropdowns[label_names[self.index + 1]].disable()
+            self.next_lddm.disable()
+            self.next_lddm.menu.set('')
+            self.next_lddm.disable_next()
         else:
             add1_btn['state'] = tk.DISABLED
 
@@ -185,7 +186,7 @@ class LabeledDropDownMenu:
 
         # otherwise (if the selection is for some other drop-down), we want to alter
         # the possible values of the next drop down menu in the hierarchy
-        next_dd = dropdowns[label_names[self.index + 1]]
+        next_dd = self.next_lddm
         next_dd.next_vals = self.next_vals[self.menu.get()]
         vals = sorted(list(next_dd.next_vals.keys()), key=multisort)
         # next_dd.menu['values'] = vals
@@ -193,9 +194,10 @@ class LabeledDropDownMenu:
         
         # blank out & disable all drop-down menus after whichever one was selected
         # so that selections high in the hierarchy will clear out the following menus' values
-        for dd in list(dropdowns.values())[next_dd.index:]: 
-            dd.menu.set('')
-            dd.disable()
+        # for dd in list(dropdowns.values())[next_dd.index:]: 
+        #     dd.menu.set('')
+        #     dd.disable()
+        next_dd.disable_next()
 
         if len(vals) == 1:  # if there's only 1 possible value for the next drop down
             # lock that value into that drop-down menu and disable it from selections
@@ -217,9 +219,9 @@ def sign_in(event):
     record button are activated, a welcome message is displayed, and populate_most_recent()
     is called to display the map records most recently inventoried by the selected user."""
 
-    list(dropdowns.values())[0].enable()
-    exception_btn['state'] = NORMAL
-    remove_btn['state'] = NORMAL
+    dropdowns[0].enable()
+    exception_btn['state'] = tk.NORMAL
+    remove_btn['state'] = tk.NORMAL
     dialog['foreground'] = '#0f0' # text will be green
     dialogContents.set("Welcome, " + initials.get() + "!")
     populate_most_recent(initials.get())
@@ -286,7 +288,7 @@ def record_this_map():
     the next_vals field of the last LDDM. If there's only one result, those values 
     are inserted into the database. Otherwise, we call select_from_multiple().
     """
-    last_dd = list(dropdowns.values())[len(dropdowns)-1]
+    last_dd = dropdowns[len(dropdowns)-1]
     results = last_dd.next_vals[last_dd.menu.get()] # should be a list of tuples
     if len(results) == 1:
         insert_record(results[0][0])  # passing in just the scan ID
@@ -298,20 +300,20 @@ def select_from_multiple(results):
     map records matches the map physically in hand. Each map is an option on a 
     radiobutton, and each option has a button which will open up the map pdf in 
     the user's web browser.  by opening up the links to the different options"""
-    win = Toplevel(root)
+    win = tk.Toplevel(root)
     win.wm_transient(root)
     win.title("Multiple matches found")
     ttk.Label(win, text="The USGS database has multiple records for that map.  Please select the record that matches the map in hand.")\
         .grid(row=0, columnspan=2, pady=20, padx=20)
-    choices = StringVar()
-    record_btn = Button(win, text="Record this map", command=lambda: record_chosen_map(choices.get(), win), state=DISABLED)
+    choices = tk.StringVar()
+    record_btn = tk.Button(win, text="Record this map", command=lambda: record_chosen_map(choices.get(), win), state=tk.DISABLED)
 
     for idx, result in enumerate(results):
         result_id = result[0]
         result_link=result[1]
-        ttk.Radiobutton(win, text=result_id, variable=choices, command=lambda:record_btn.configure(state=NORMAL), value=result_id)\
+        ttk.Radiobutton(win, text=result_id, variable=choices, command=lambda:record_btn.configure(state=tk.NORMAL), value=result_id)\
             .grid(row=idx+1, column=0, pady=5, sticky='e')
-        Button(win, text="Open pdf in browser", command=lambda result_link=result_link: webbrowser.open_new_tab(result_link))\
+        tk.Button(win, text="Open pdf in browser", command=lambda result_link=result_link: webbrowser.open_new_tab(result_link))\
             .grid(row=idx+1, column=1, sticky='w')
     
     record_btn.grid(row=idx+2, column=0, columnspan=2, pady=20)
@@ -365,7 +367,7 @@ def add_to_table(scan_id):
 def grab_dd_values():
     """traverses the drop-downs in order, returns a list of their currently selected values"""
     data = []
-    for dd in dropdowns.values():
+    for dd in dropdowns:
         data.append(dd.menu.get()) 
     return data
 
@@ -382,7 +384,7 @@ def record_exception(selected_vals):
     map's cell name, if it uses the same cell system as USGS. Therefore, we also read
     in data on GNIS cell IDs by state and cell and populate menu values accordingly.
     """
-    exc = Toplevel(root)
+    exc = tk.Toplevel(root)
     exc.wm_transient(root) # makes the exception window a sub-window rather than a separate window
     exc.grab_set() # makes it so user can't interact with the main window while exception window is open
     exc.title("Record an exception")
@@ -395,7 +397,7 @@ def record_exception(selected_vals):
 
     # producer radiobutton
     ttk.Label(content, text="Map producer:").grid(row=1, column=0, padx=10)
-    producer = StringVar()
+    producer = tk.StringVar()
     producers = ['Army Map Service', 'Bureau of Land Management', 'Defense Mapping Agency', 'USGS']
     for idx, prod in enumerate(producers):
         ttk.Radiobutton(options, text=prod, variable=producer, value=prod)\
@@ -412,7 +414,7 @@ def record_exception(selected_vals):
     file_io.read_gnis("usgs_topos.csv", cells)
 
     ttk.Label(options, text="Cell Name:").grid(row=3, column=3, pady=5, sticky='e')
-    cell_dd = AutocompleteCombobox(options, state=NORMAL) # , state=DISABLED
+    cell_dd = AutocompleteCombobox(options, state=tk.NORMAL) # , state=DISABLED
     cell_dd.grid(row=3, column=4, columnspan=2, pady=5, sticky='w')
 
     ttk.Label(options, text="Primary State:").grid(row=2, column=3, pady=5, sticky='e')
@@ -453,14 +455,14 @@ def record_exception(selected_vals):
     edition_entry.grid(row=6, column=5, pady=5, sticky='w')
 
     # just like the main window, we have checkboxes to flag damages or duplicates
-    dmgvar = BooleanVar(value=False)
-    damaged = Checkbutton(options, text="This map is significantly damaged", 
+    dmgvar = tk.BooleanVar(value=False)
+    damaged = tk.Checkbutton(options, text="This map is significantly damaged", 
                 variable=dmgvar, onvalue=True)
     damaged.grid(row=7, column=0, columnspan=3, rowspan=1, padx=5, pady=5)
     damaged.deselect()
 
-    dupevar = BooleanVar(value=False)
-    duplicate = Checkbutton(options, text="We have duplicate(s) for this map", 
+    dupevar = tk.BooleanVar(value=False)
+    duplicate = tk.Checkbutton(options, text="We have duplicate(s) for this map", 
                 variable=dupevar, onvalue=True)
     duplicate.grid(row=7, column=3, columnspan=3, rowspan=1, padx=5, pady=5)
     duplicate.deselect()
@@ -571,15 +573,15 @@ def confirm_removal(removal_id):
     To confirm the removal of a selected map from the table display, a new pop-up
     window is created requiring the user to click an extra button to confirm.
     """
-    top = Toplevel(root)
+    top = tk.Toplevel(root)
     top.wm_transient(root)
     top.grab_set() # makes it so user can't interact with the main window while the confirm removal window is open
     top.geometry("400x250")
     top.title("Confirm removal")
-    Label(top, text = "Please confirm that you want to remove map " + removal_id + ".")\
-        .place(relx=0.5, rely=0.3, anchor=CENTER)
-    Button(top, text= "Yes, remove this record", foreground='#f00', command=lambda:remove(removal_id, top))\
-        .place(relx=0.5, rely=0.5, anchor=CENTER)
+    tk.Label(top, text = "Please confirm that you want to remove map " + removal_id + ".")\
+        .place(relx=0.5, rely=0.3, anchor=tk.CENTER)
+    tk.Button(top, text= "Yes, remove this record", foreground='#f00', command=lambda:remove(removal_id, top))\
+        .place(relx=0.5, rely=0.5, anchor=tk.CENTER)
     
 def remove(removal_id, window):
     """When the user confirms that they want to remove a given map from our records,
@@ -636,50 +638,50 @@ initials.bind('<<ComboboxSelected>>', sign_in)
 # add an options frame to contain all the menus and buttons for recording maps
 options = tk.Frame(content)
 
-# set up a series of labeled drop down menus for a list of attributes, and put 
-# those LDDMs into an ordered dictionary structure so that they can be looked up
-# by name but also be stored in a specific order
+# set up an ordered list of labeled drop down menus, one for each map attribute
 label_names = ['Map Scale', 'Primary State', 'Cell Name', 'Map Year', 'Print Year'] 
-dropdowns = OrderedDict()
+dropdowns = []
 
 for idx, lbl in enumerate(label_names):
-    dropdowns[lbl] = LabeledDropDownMenu(ttk.Label(options, text=lbl + ": ")
-        , AutocompleteCombobox(options, state=DISABLED)
-        , ttk.Button(options, text="^", state=DISABLED)
-        , ttk.Button(options, text="v", state=DISABLED)
+    lddm = LabeledDropDownMenu(ttk.Label(options, text=lbl + ": ")
+        , AutocompleteCombobox(options, state=tk.DISABLED)
+        , ttk.Button(options, text="^", state=tk.DISABLED)
+        , ttk.Button(options, text="v", state=tk.DISABLED)
         , idx
         , {}
     )
-# for example, dropdowns['Cell Name'].menu['state'] = 'readonly' would activate the Cell Name drop down menu.
+    dropdowns.append(lddm)
+    if idx != 0:
+        dropdowns[idx-1].set_next_lddm(lddm)
 
-# read map data into a nested dictionary
+# read map data into a nested dictionary, ordered according to our set of map attributes
 maps = {}
 file_io.read_topos('usgs_topos.csv', maps)
 
 # initialize the first dropdown
-first_dd = list(dropdowns.values())[0] # access the first labeled dropdown menu
-first_dd.next_vals = maps
-# first_dd.menu['values'] = sorted(list(maps.keys()), key=multisort) # or whatever corresponding dict's keys
-first_dd.menu.set_completion_list(sorted(list(maps.keys()), key=multisort), lambda: first_dd.dd_selected(), lambda: first_dd.disable_next())
+first_dd = dropdowns[0] # access the first labeled dropdown menu
+first_dd.next_vals = maps # give the map data to the first menu
+first_dd.menu.set_completion_list(sorted(list(maps.keys()), key=multisort), \
+    lambda: first_dd.dd_selected(), lambda: first_dd.disable_next())
 
-dmgvar = BooleanVar(value=False)
+# checkboxes to flag damages and duplicates
+dmgvar = tk.BooleanVar(value=False)
 damaged = ttk.Checkbutton(options, text="This map is significantly damaged", 
             variable=dmgvar, onvalue=True)
 
-dupevar = BooleanVar(value=False)
+dupevar = tk.BooleanVar(value=False)
 duplicate = ttk.Checkbutton(options, text="We have duplicate(s) for this map", 
             variable=dupevar, onvalue=True)
 
-exception_btn = ttk.Button(options, text='Record an exception', command=lambda: record_exception(grab_dd_values()), state=DISABLED)
+# buttons for recording this map, recording exceptions, and removing selected records
+add1_btn = ttk.Button(options, text='Record this map', command=record_this_map, state=tk.DISABLED)
+exception_btn = ttk.Button(options, text='Record an exception', command=lambda: record_exception(grab_dd_values()), state=tk.DISABLED)
+remove_btn = ttk.Button(options, text='Remove selected record', command=remove_selected_record, state=tk.DISABLED)
 
-remove_btn = ttk.Button(options, text='Remove selected record', command=remove_selected_record, state=DISABLED)
-
-add1_btn = ttk.Button(options, text='Record this map', command=record_this_map, state=DISABLED)
-
-dialogContents = StringVar()
+# set up a space on the main window for dialog messages to be displayed to the user
+dialogContents = tk.StringVar()
 dialog = ttk.Label(options)
 dialog['textvariable'] = dialogContents
-dialog.grid(row=8, column=3, columnspan=3, rowspan=1, pady=5, sticky='s')
 
 # ---------------- table frame ---------------------------
 table = tk.Frame(content)
@@ -706,7 +708,7 @@ initials.grid(row=0, column=6, padx=20)
 # ---- options frame ----
 options.grid(row=1, column=0, columnspan=7, rowspan=8, pady=5)
 
-for idx, dd in enumerate(dropdowns.values()):
+for idx, dd in enumerate(dropdowns):
     r = (idx%3)*2 + 1  # creates three rows of drop downs, starting at row 1, with
     c = int(idx/3)*3   # as many columns as are needed for the set of drop downs
 
@@ -721,34 +723,12 @@ duplicate.grid(row=6, column=3, columnspan=3, rowspan=1) # duplicate checkbox
 exception_btn.grid(row=7, column=0, columnspan=3, pady=5) # record exception button
 remove_btn.grid(row=8, column=0, columnspan=3, pady=5) # remove selected button
 add1_btn.grid(row=7, column=3, rowspan=2, columnspan=3, pady=5) # record this map button
-dialog.grid(row=8, column=3, columnspan=3, rowspan=1, pady=5) # dialog label
+dialog.grid(row=8, column=3, columnspan=3, rowspan=1, pady=5, sticky='s') # dialog label
 
 # ---- table frame ----
 table.grid(row=9, column=0, columnspan=7, rowspan=1, pady=5)
 tbl.grid(row=9, column=0, columnspan=6, rowspan=1) # table 
 tbl_scroll.grid(row=9, column=6, rowspan=1, sticky='ns') # table scroll bar
 
-# ------------------------------ run the app -------------------------------
+# ------------------------------ RUN THE TOOL ----------------------------------
 root.mainloop()
-
-
-
-# --------- code for rendering images from URL into tkinter window, if desired ----------------
-
-# import urllib.request
-# import io
-# from PIL import Image, ImageTk
-# root = Tk()
-# images = []
-# fake_csv = [[1, "blue", 4, "pillow"], [2, "red", 12, "horse"]]
-# mapthumb = 'https://prd-tnm.s3.amazonaws.com/StagedProducts/Maps/HistoricalTopo/PDF/AK/25000/AK_Anchorage%20B-7%20NW_353597_1979_25000_tn.jpg'
-
-# for i in range(0, 1): # changed from 8 to 1 from https://stackoverflow.com/questions/38173526/displaying-images-from-url-in-tkinter
-#     raw_data = urllib.request.urlopen(mapthumb).read()
-#     im = Image.open(io.BytesIO(raw_data))
-#     image = ImageTk.PhotoImage(im)
-#     label1 = Label(root, image=image)
-#     label1.grid(row=i, sticky=W)
-
-#     # append to list in order to keep the reference
-#     images.append(image)

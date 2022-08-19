@@ -52,6 +52,7 @@ Completed:
 To-do:
 - comment and reorganize code (next: read_topos should take columns as an ordered input parameter)
 - write a proper readme (high level description of what each of the py files does)
+- clean up imports
 - try implementing autocomplete for drop down menus (implement for other menus on main window)
 
 Important notes:
