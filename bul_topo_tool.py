@@ -365,7 +365,7 @@ def record_exception(selected_vals):
     # producer radiobutton
     ttk.Label(content, text="Map producer:").grid(row=1, column=0, padx=10)
     producer = tk.StringVar()
-    producers = ['Army Map Service', 'Bureau of Land Management', 'Defense Mapping Agency', 'USGS']
+    producers = ['Army Map Service', 'Bureau of Land Management', 'Defense Mapping Agency', 'USGS', 'Other']
     for idx, prod in enumerate(producers):
         ttk.Radiobutton(options, text=prod, variable=producer, value=prod)\
             .grid(row=idx+2, column=0, columnspan=3, pady=5, padx=10, sticky='w')
@@ -409,36 +409,36 @@ def record_exception(selected_vals):
 
     # the exception menu has several extra text entry fields to allow us to record
     # the Sheet, Series, and Edition of Army Mapping Service maps that we have
-    ttk.Label(options, text="Sheet:").grid(row=6, column=2, pady=5, sticky='e')
+    ttk.Label(options, text="Sheet:").grid(row=7, column=2, pady=5, sticky='e')
     sheet_entry = ttk.Entry(options)
-    sheet_entry.grid(row=6, column=1, pady=5, sticky='w')
+    sheet_entry.grid(row=7, column=1, pady=5, sticky='w')
 
-    ttk.Label(options, text="Series:").grid(row=6, column=0, pady=5, sticky='e')
+    ttk.Label(options, text="Series:").grid(row=7, column=0, pady=5, sticky='e')
     series_entry = ttk.Entry(options)
-    series_entry.grid(row=6, column=3, pady=5, sticky='w')
+    series_entry.grid(row=7, column=3, pady=5, sticky='w')
 
-    ttk.Label(options, text="Edition:").grid(row=6, column=4, pady=5, sticky='e')
+    ttk.Label(options, text="Edition:").grid(row=7, column=4, pady=5, sticky='e')
     edition_entry = ttk.Entry(options)
-    edition_entry.grid(row=6, column=5, pady=5, sticky='w')
+    edition_entry.grid(row=7, column=5, pady=5, sticky='w')
 
     # just like the main window, we have checkboxes to flag damages or duplicates
     dmgvar = tk.BooleanVar(value=False)
     damaged = tk.Checkbutton(options, text="This map is significantly damaged", 
                 variable=dmgvar, onvalue=True)
-    damaged.grid(row=7, column=0, columnspan=3, rowspan=1, padx=5, pady=5)
+    damaged.grid(row=8, column=0, columnspan=3, rowspan=1, padx=5, pady=5)
     damaged.deselect()
 
     dupevar = tk.BooleanVar(value=False)
     duplicate = tk.Checkbutton(options, text="We have duplicate(s) for this map", 
                 variable=dupevar, onvalue=True)
-    duplicate.grid(row=7, column=3, columnspan=3, rowspan=1, padx=5, pady=5)
+    duplicate.grid(row=8, column=3, columnspan=3, rowspan=1, padx=5, pady=5)
     duplicate.deselect()
 
     map_vars = [producer, scale_dd, state_dd, cell_dd, map_year_entry, 
         print_year_entry, sheet_entry, series_entry, edition_entry, dmgvar, dupevar]
 
     record_exc_btn = ttk.Button(exc, text= "Record this map", command=lambda:insert_exception(map_vars, cells, exc))
-    record_exc_btn.grid(row=8, column=0, columnspan=3, pady=10)
+    record_exc_btn.grid(row=9, column=0, columnspan=3, pady=10)
 
 def insert_exception(exc_map_vars, cells, window):
     """When the user hits the "Record this map" button on the exceptions window,
