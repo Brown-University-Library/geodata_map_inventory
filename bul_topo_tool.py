@@ -7,7 +7,7 @@ from datetime import datetime
 import file_io, db # import the other files in this package
 
 tool_title = 'BUL Topo Map Inventory Tool'
-map_db = db.Database('//files.brown.edu/DFS/Library_Shared/_geodata/maps/maps_we_have_test.db')
+map_db = db.Database('//files.brown.edu/DFS/Library_Shared/_geodata/maps/bul_topo_map_inventory.db')
 
 # ------------------------------------------------------------------------------
 # ---------------------------- CUSTOM CLASSES ----------------------------------
