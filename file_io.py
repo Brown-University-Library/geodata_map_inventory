@@ -1,7 +1,4 @@
 # Ethan McIntosh - GIS and Data Services - Brown University Library - August 2022
-# 
-# Methods for reading csv files in and out of Python data structures for the map
-# inventory project.
 
 import pandas as pd
 import csv

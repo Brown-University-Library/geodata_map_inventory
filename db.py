@@ -1,7 +1,4 @@
 # Ethan McIntosh - GIS and Data Services - Brown University - August 2022
-#
-# Code for a Database class with methods for reading data in and out of the 
-# SQLite database backend for the map inventory project.
 
 import sqlite3
 
