@@ -21,7 +21,7 @@ See usgs_inventory_workflow.pdf for instructions on the process of running the t
 
 Note: the program will not be able to record maps if anyone is actively writing changes to the map database file using a application like DB Browser. Python will throw an error saying the database is locked. We can have the database open in DB Browser while the script is running, but only in reading mode. If we need to make manual changes to the database using DB Browser, be sure to hit "Write Changes" (Ctrl-S) to get out of writing mode before running the script again. 
 
-![](S:\_geodata\maps\map_inventory\geodata_map_inventory\bul_topo_entries_multiple.png)
+![](bul_topo_entries_multiple.png)
 
 ### File Descriptions
 
