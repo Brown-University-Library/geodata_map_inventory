@@ -4,10 +4,16 @@ import tkinter as tk
 from tkinter import ttk
 import webbrowser
 from datetime import datetime
-import file_io, db # import the other files in this package
+import os, file_io, db # import the other files in this package
 
 tool_title = 'BUL Topo Map Inventory Tool'
-map_db = db.Database('//files.brown.edu/DFS/Library_Shared/_geodata/maps/bul_topo_map_inventory.db')
+if os.name=='posix':
+    top_path=os.path.split(os.path.dirname(os.getcwd()))[0]
+    db_path=os.path.join(top_path,'bul_topo_map_inventory.db')
+    map_db = db.Database(db_path)
+else:
+    db_path='//files.brown.edu/DFS/Library_Shared/_geodata/maps/bul_topo_map_inventory.db'
+    map_db = db.Database(db_path)
 
 # ------------------------------------------------------------------------------
 # ---------------------------- CUSTOM CLASSES ----------------------------------
