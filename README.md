@@ -8,7 +8,7 @@ See usgs_inventory_workflow.pdf for instructions on the process of running the t
 
 ### Requirements for running the tool
 
-- You need to be granted access to the Brown University Library shared drive, where the SQLite map database is stored.
+- You need to be granted access to the Brown University Library shared drive, where the SQLite map database is stored (for users outside of Brown who are applying this to your own workflow, set up a similar folder structure)
 - Your computer needs to have Python 3 or higher installed.
 - You need to install the pandas module into your Python interpreter, if you don't have it already. All other modules needed for the tool are in the Python Standard Library.
 
@@ -37,3 +37,5 @@ Note: the program will not be able to record maps if anyone is actively writing 
 ### How the code for the main script is organized
 
 The main executable script file (bul_topo_tool.py) is organized into sections, starting with a section holding the code for two custom data structures: an AutocompleteCombobox (a drop-down menu that autocompletes typed-in entries) and a LabeledDropDownMenu, which bundles together a drop-down menu with other tkinter widgets and links these bundled objects to each other in a hierarchical order. Below the section for the custom classes are sections for tool initialization, recording regular maps, recording exception maps, removing records, and miscellaneous operations. All of these sections of code consist solely of methods. The code that actually builds the main tool window and runs the application is at the bottom of the file (roughly 600 lines in), after the methods.
+
+Note - in Oct 2022 we discovered a bug where the values for the series and sheet for exception maps are inverted and stored in the opposite columns in the database table. Since we have already begun our inventory process, we have opted not to correct this issue.
