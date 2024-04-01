@@ -60,6 +60,18 @@ def read_gnis(filepath:str, cells:dict):
     # makes it so that GNIS cell IDs are unique to each scale / state / cell name combination
     topo_df = topo_df[[x.startswith('Standard') for x in topo_df.cell_type]]
     
+    # some territories have no standard maps, but need them to appear in
+    # exceptions dropdown menu
+    ttory=pd.DataFrame(
+        [['','','American Samoa','','24000'],
+          ['','','Guam','','24000'],
+          ['','','Federated States of Micronesia','','25000'],
+          ['','','Northern Mariana Islands','','25000'],
+          ['','','Republic of Palau','','25000']],
+          index=[1,2,3,4,5],
+          columns=columns)
+    topo_df=pd.concat([topo_df,ttory])
+    
     topos = topo_df.values.tolist()
     for topo in topos:
         # unpack values of each row (i.e. each map) into named variables
